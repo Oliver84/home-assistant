@@ -20,6 +20,8 @@ from homeassistant.const import (
     ATTR_NAME,
     CONF_DOMAINS,
     CONF_ENTITIES,
+    CONF_EXCLUDE,
+    CONF_INCLUDE,
     EVENT_HOMEASSISTANT_START,
     EVENT_HOMEASSISTANT_STOP,
     EVENT_STATE_CHANGED,
@@ -36,8 +38,8 @@ from homeassistant.helpers.json import JSONEncoder
 from homeassistant.setup import async_setup_component, setup_component
 import homeassistant.util.dt as dt_util
 
-from tests.async_mock import patch
-from tests.common import get_test_home_assistant, init_recorder_component
+from tests.async_mock import Mock, patch
+from tests.common import get_test_home_assistant, init_recorder_component, mock_platform
 from tests.components.recorder.common import trigger_db_commit
 
 _LOGGER = logging.getLogger(__name__)
@@ -77,7 +79,15 @@ class TestComponentLogbook(unittest.TestCase):
             },
             True,
         )
-
+        self.hass.services.call(
+            logbook.DOMAIN,
+            "log",
+            {
+                logbook.ATTR_NAME: "This entry",
+                logbook.ATTR_MESSAGE: "has no domain or entity_id",
+            },
+            True,
+        )
         # Logbook entry service call results in firing an event.
         # Our service call will unblock when the event listeners have been
         # scheduled. This means that they may not have been processed yet.
@@ -92,15 +102,21 @@ class TestComponentLogbook(unittest.TestCase):
                 dt_util.utcnow() + timedelta(hours=1),
             )
         )
-        assert len(events) == 1
+        assert len(events) == 2
 
-        assert len(calls) == 1
+        assert len(calls) == 2
+        first_call = calls[-2]
+
+        assert first_call.data.get(logbook.ATTR_NAME) == "Alarm"
+        assert first_call.data.get(logbook.ATTR_MESSAGE) == "is triggered"
+        assert first_call.data.get(logbook.ATTR_DOMAIN) == "switch"
+        assert first_call.data.get(logbook.ATTR_ENTITY_ID) == "switch.test_switch"
+
         last_call = calls[-1]
 
-        assert last_call.data.get(logbook.ATTR_NAME) == "Alarm"
-        assert last_call.data.get(logbook.ATTR_MESSAGE) == "is triggered"
-        assert last_call.data.get(logbook.ATTR_DOMAIN) == "switch"
-        assert last_call.data.get(logbook.ATTR_ENTITY_ID) == "switch.test_switch"
+        assert last_call.data.get(logbook.ATTR_NAME) == "This entry"
+        assert last_call.data.get(logbook.ATTR_MESSAGE) == "has no domain or entity_id"
+        assert last_call.data.get(logbook.ATTR_DOMAIN) == "logbook"
 
     def test_service_call_create_log_book_entry_no_message(self):
         """Test if service call create log book entry without message."""
@@ -149,99 +165,6 @@ class TestComponentLogbook(unittest.TestCase):
             entries[1], pointC, "bla", domain="sensor", entity_id=entity_id
         )
 
-    def test_filter_continuous_sensor_values(self):
-        """Test remove continuous sensor events from logbook."""
-        entity_id = "sensor.bla"
-        pointA = dt_util.utcnow()
-        entity_attr_cache = logbook.EntityAttributeCache(self.hass)
-        attributes = {"unit_of_measurement": "foo"}
-        eventA = self.create_state_changed_event(pointA, entity_id, 10, attributes)
-
-        entities_filter = convert_include_exclude_filter(
-            logbook.CONFIG_SCHEMA({logbook.DOMAIN: {}})[logbook.DOMAIN]
-        )
-        assert (
-            logbook._keep_event(self.hass, eventA, entities_filter, entity_attr_cache)
-            is False
-        )
-
-    def test_exclude_new_entities(self):
-        """Test if events are excluded on first update."""
-        entity_id = "sensor.bla"
-        entity_id2 = "sensor.blu"
-        pointA = dt_util.utcnow()
-        pointB = pointA + timedelta(minutes=logbook.GROUP_BY_MINUTES)
-        entity_attr_cache = logbook.EntityAttributeCache(self.hass)
-
-        state_on = ha.State(
-            entity_id, "on", {"brightness": 200}, pointA, pointA
-        ).as_dict()
-
-        eventA = self.create_state_changed_event_from_old_new(
-            entity_id, pointA, None, state_on
-        )
-        eventB = self.create_state_changed_event(pointB, entity_id2, 20)
-
-        entities_filter = convert_include_exclude_filter(
-            logbook.CONFIG_SCHEMA({logbook.DOMAIN: {}})[logbook.DOMAIN]
-        )
-        events = [
-            e
-            for e in (
-                MockLazyEventPartialState(EVENT_HOMEASSISTANT_STOP),
-                eventA,
-                eventB,
-            )
-            if logbook._keep_event(self.hass, e, entities_filter, entity_attr_cache)
-        ]
-        entries = list(logbook.humanify(self.hass, events, entity_attr_cache))
-
-        assert len(entries) == 2
-        self.assert_entry(
-            entries[0], name="Home Assistant", message="stopped", domain=ha.DOMAIN
-        )
-        self.assert_entry(
-            entries[1], pointB, "blu", domain="sensor", entity_id=entity_id2
-        )
-
-    def test_exclude_removed_entities(self):
-        """Test if events are excluded on last update."""
-        entity_id = "sensor.bla"
-        entity_id2 = "sensor.blu"
-        pointA = dt_util.utcnow()
-        pointB = pointA + timedelta(minutes=logbook.GROUP_BY_MINUTES)
-        entity_attr_cache = logbook.EntityAttributeCache(self.hass)
-
-        state_on = ha.State(
-            entity_id, "on", {"brightness": 200}, pointA, pointA
-        ).as_dict()
-        eventA = self.create_state_changed_event_from_old_new(
-            None, pointA, state_on, None,
-        )
-        eventB = self.create_state_changed_event(pointB, entity_id2, 20)
-
-        entities_filter = convert_include_exclude_filter(
-            logbook.CONFIG_SCHEMA({logbook.DOMAIN: {}})[logbook.DOMAIN]
-        )
-        events = [
-            e
-            for e in (
-                MockLazyEventPartialState(EVENT_HOMEASSISTANT_STOP),
-                eventA,
-                eventB,
-            )
-            if logbook._keep_event(self.hass, e, entities_filter, entity_attr_cache)
-        ]
-        entries = list(logbook.humanify(self.hass, events, entity_attr_cache))
-
-        assert len(entries) == 2
-        self.assert_entry(
-            entries[0], name="Home Assistant", message="stopped", domain=ha.DOMAIN
-        )
-        self.assert_entry(
-            entries[1], pointB, "blu", domain="sensor", entity_id=entity_id2
-        )
-
     def test_exclude_events_entity(self):
         """Test if events are filtered if entity is excluded in config."""
         entity_id = "sensor.bla"
@@ -256,7 +179,7 @@ class TestComponentLogbook(unittest.TestCase):
         config = logbook.CONFIG_SCHEMA(
             {
                 ha.DOMAIN: {},
-                logbook.DOMAIN: {logbook.CONF_EXCLUDE: {CONF_ENTITIES: [entity_id]}},
+                logbook.DOMAIN: {CONF_EXCLUDE: {CONF_ENTITIES: [entity_id]}},
             }
         )
         entities_filter = convert_include_exclude_filter(config[logbook.DOMAIN])
@@ -267,7 +190,7 @@ class TestComponentLogbook(unittest.TestCase):
                 eventA,
                 eventB,
             )
-            if logbook._keep_event(self.hass, e, entities_filter, entity_attr_cache)
+            if logbook._keep_event(self.hass, e, entities_filter)
         ]
         entries = list(logbook.humanify(self.hass, events, entity_attr_cache))
 
@@ -293,9 +216,7 @@ class TestComponentLogbook(unittest.TestCase):
         config = logbook.CONFIG_SCHEMA(
             {
                 ha.DOMAIN: {},
-                logbook.DOMAIN: {
-                    logbook.CONF_EXCLUDE: {CONF_DOMAINS: ["switch", "alexa"]}
-                },
+                logbook.DOMAIN: {CONF_EXCLUDE: {CONF_DOMAINS: ["switch", "alexa"]}},
             }
         )
         entities_filter = convert_include_exclude_filter(config[logbook.DOMAIN])
@@ -307,7 +228,7 @@ class TestComponentLogbook(unittest.TestCase):
                 eventA,
                 eventB,
             )
-            if logbook._keep_event(self.hass, e, entities_filter, entity_attr_cache)
+            if logbook._keep_event(self.hass, e, entities_filter)
         ]
         entries = list(logbook.humanify(self.hass, events, entity_attr_cache))
 
@@ -337,7 +258,7 @@ class TestComponentLogbook(unittest.TestCase):
             {
                 ha.DOMAIN: {},
                 logbook.DOMAIN: {
-                    logbook.CONF_EXCLUDE: {
+                    CONF_EXCLUDE: {
                         CONF_DOMAINS: ["switch", "alexa"],
                         CONF_ENTITY_GLOBS: "*.excluded",
                     }
@@ -354,7 +275,7 @@ class TestComponentLogbook(unittest.TestCase):
                 eventB,
                 eventC,
             )
-            if logbook._keep_event(self.hass, e, entities_filter, entity_attr_cache)
+            if logbook._keep_event(self.hass, e, entities_filter)
         ]
         entries = list(logbook.humanify(self.hass, events, entity_attr_cache))
 
@@ -381,7 +302,7 @@ class TestComponentLogbook(unittest.TestCase):
             {
                 ha.DOMAIN: {},
                 logbook.DOMAIN: {
-                    logbook.CONF_INCLUDE: {
+                    CONF_INCLUDE: {
                         CONF_DOMAINS: ["homeassistant"],
                         CONF_ENTITIES: [entity_id2],
                     }
@@ -396,7 +317,7 @@ class TestComponentLogbook(unittest.TestCase):
                 eventA,
                 eventB,
             )
-            if logbook._keep_event(self.hass, e, entities_filter, entity_attr_cache)
+            if logbook._keep_event(self.hass, e, entities_filter)
         ]
         entries = list(logbook.humanify(self.hass, events, entity_attr_cache))
 
@@ -429,9 +350,7 @@ class TestComponentLogbook(unittest.TestCase):
             {
                 ha.DOMAIN: {},
                 logbook.DOMAIN: {
-                    logbook.CONF_INCLUDE: {
-                        CONF_DOMAINS: ["homeassistant", "sensor", "alexa"]
-                    }
+                    CONF_INCLUDE: {CONF_DOMAINS: ["homeassistant", "sensor", "alexa"]}
                 },
             }
         )
@@ -444,7 +363,7 @@ class TestComponentLogbook(unittest.TestCase):
                 eventA,
                 eventB,
             )
-            if logbook._keep_event(self.hass, e, entities_filter, entity_attr_cache)
+            if logbook._keep_event(self.hass, e, entities_filter)
         ]
         entries = list(logbook.humanify(self.hass, events, entity_attr_cache))
 
@@ -481,7 +400,7 @@ class TestComponentLogbook(unittest.TestCase):
             {
                 ha.DOMAIN: {},
                 logbook.DOMAIN: {
-                    logbook.CONF_INCLUDE: {
+                    CONF_INCLUDE: {
                         CONF_DOMAINS: ["homeassistant", "sensor", "alexa"],
                         CONF_ENTITY_GLOBS: ["*.included"],
                     }
@@ -498,7 +417,7 @@ class TestComponentLogbook(unittest.TestCase):
                 eventB,
                 eventC,
             )
-            if logbook._keep_event(self.hass, e, entities_filter, entity_attr_cache)
+            if logbook._keep_event(self.hass, e, entities_filter)
         ]
         entries = list(logbook.humanify(self.hass, events, entity_attr_cache))
 
@@ -533,11 +452,11 @@ class TestComponentLogbook(unittest.TestCase):
             {
                 ha.DOMAIN: {},
                 logbook.DOMAIN: {
-                    logbook.CONF_INCLUDE: {
+                    CONF_INCLUDE: {
                         CONF_DOMAINS: ["sensor", "homeassistant"],
                         CONF_ENTITIES: ["switch.bla"],
                     },
-                    logbook.CONF_EXCLUDE: {
+                    CONF_EXCLUDE: {
                         CONF_DOMAINS: ["switch"],
                         CONF_ENTITIES: ["sensor.bli"],
                     },
@@ -555,7 +474,7 @@ class TestComponentLogbook(unittest.TestCase):
                 eventB1,
                 eventB2,
             )
-            if logbook._keep_event(self.hass, e, entities_filter, entity_attr_cache)
+            if logbook._keep_event(self.hass, e, entities_filter)
         ]
         entries = list(logbook.humanify(self.hass, events, entity_attr_cache))
 
@@ -602,12 +521,12 @@ class TestComponentLogbook(unittest.TestCase):
             {
                 ha.DOMAIN: {},
                 logbook.DOMAIN: {
-                    logbook.CONF_INCLUDE: {
+                    CONF_INCLUDE: {
                         CONF_DOMAINS: ["sensor", "homeassistant"],
                         CONF_ENTITIES: ["switch.bla"],
                         CONF_ENTITY_GLOBS: ["*.included"],
                     },
-                    logbook.CONF_EXCLUDE: {
+                    CONF_EXCLUDE: {
                         CONF_DOMAINS: ["switch"],
                         CONF_ENTITY_GLOBS: ["*.excluded"],
                         CONF_ENTITIES: ["sensor.bli"],
@@ -629,7 +548,7 @@ class TestComponentLogbook(unittest.TestCase):
                 eventC2,
                 eventC3,
             )
-            if logbook._keep_event(self.hass, e, entities_filter, entity_attr_cache)
+            if logbook._keep_event(self.hass, e, entities_filter)
         ]
         entries = list(logbook.humanify(self.hass, events, entity_attr_cache))
 
@@ -651,43 +570,6 @@ class TestComponentLogbook(unittest.TestCase):
         )
         self.assert_entry(
             entries[5], pointC, "included", domain="light", entity_id=entity_id4
-        )
-
-    def test_exclude_attribute_changes(self):
-        """Test if events of attribute changes are filtered."""
-        pointA = dt_util.utcnow()
-        pointB = pointA + timedelta(minutes=1)
-        pointC = pointB + timedelta(minutes=1)
-        entity_attr_cache = logbook.EntityAttributeCache(self.hass)
-
-        state_off = ha.State("light.kitchen", "off", {}, pointA, pointA).as_dict()
-        state_100 = ha.State(
-            "light.kitchen", "on", {"brightness": 100}, pointB, pointB
-        ).as_dict()
-        state_200 = ha.State(
-            "light.kitchen", "on", {"brightness": 200}, pointB, pointC
-        ).as_dict()
-
-        eventA = self.create_state_changed_event_from_old_new(
-            "light.kitchen", pointB, state_off, state_100
-        )
-        eventB = self.create_state_changed_event_from_old_new(
-            "light.kitchen", pointC, state_100, state_200
-        )
-
-        entities_filter = convert_include_exclude_filter(
-            logbook.CONFIG_SCHEMA({logbook.DOMAIN: {}})[logbook.DOMAIN]
-        )
-        events = [
-            e
-            for e in (eventA, eventB)
-            if logbook._keep_event(self.hass, e, entities_filter, entity_attr_cache)
-        ]
-        entries = list(logbook.humanify(self.hass, events, entity_attr_cache))
-
-        assert len(entries) == 1
-        self.assert_entry(
-            entries[0], pointB, "kitchen", domain="light", entity_id="light.kitchen"
         )
 
     def test_home_assistant_start_stop_grouped(self):
@@ -1563,6 +1445,22 @@ async def test_logbook_view_period_entity(hass, hass_client):
 async def test_logbook_describe_event(hass, hass_client):
     """Test teaching logbook about a new event."""
     await hass.async_add_executor_job(init_recorder_component, hass)
+
+    def _describe(event):
+        """Describe an event."""
+        return {"name": "Test Name", "message": "tested a message"}
+
+    hass.config.components.add("fake_integration")
+    mock_platform(
+        hass,
+        "fake_integration.logbook",
+        Mock(
+            async_describe_events=lambda hass, async_describe_event: async_describe_event(
+                "test_domain", "some_event", _describe
+            )
+        ),
+    )
+
     assert await async_setup_component(hass, "logbook", {})
     with patch(
         "homeassistant.util.dt.utcnow",
@@ -1573,12 +1471,6 @@ async def test_logbook_describe_event(hass, hass_client):
         await hass.async_add_executor_job(
             hass.data[recorder.DATA_INSTANCE].block_till_done
         )
-
-    def _describe(event):
-        """Describe an event."""
-        return {"name": "Test Name", "message": "tested a message"}
-
-    hass.components.logbook.async_describe_event("test_domain", "some_event", _describe)
 
     client = await hass_client()
     response = await client.get("/api/logbook")
@@ -1597,16 +1489,33 @@ async def test_exclude_described_event(hass, hass_client):
     entity_id2 = "automation.included_rule"
     entity_id3 = "sensor.excluded_domain"
 
+    def _describe(event):
+        """Describe an event."""
+        return {
+            "name": "Test Name",
+            "message": "tested a message",
+            "entity_id": event.data.get(ATTR_ENTITY_ID),
+        }
+
+    def async_describe_events(hass, async_describe_event):
+        """Mock to describe events."""
+        async_describe_event("automation", "some_automation_event", _describe)
+        async_describe_event("sensor", "some_event", _describe)
+
+    hass.config.components.add("fake_integration")
+    mock_platform(
+        hass,
+        "fake_integration.logbook",
+        Mock(async_describe_events=async_describe_events),
+    )
+
     await hass.async_add_executor_job(init_recorder_component, hass)
     assert await async_setup_component(
         hass,
         logbook.DOMAIN,
         {
             logbook.DOMAIN: {
-                logbook.CONF_EXCLUDE: {
-                    CONF_DOMAINS: ["sensor"],
-                    CONF_ENTITIES: [entity_id],
-                }
+                CONF_EXCLUDE: {CONF_DOMAINS: ["sensor"], CONF_ENTITIES: [entity_id]}
             }
         },
     )
@@ -1630,19 +1539,6 @@ async def test_exclude_described_event(hass, hass_client):
         await hass.async_add_executor_job(
             hass.data[recorder.DATA_INSTANCE].block_till_done
         )
-
-    def _describe(event):
-        """Describe an event."""
-        return {
-            "name": "Test Name",
-            "message": "tested a message",
-            "entity_id": event.data.get(ATTR_ENTITY_ID),
-        }
-
-    hass.components.logbook.async_describe_event(
-        "automation", "some_automation_event", _describe
-    )
-    hass.components.logbook.async_describe_event("sensor", "some_event", _describe)
 
     client = await hass_client()
     response = await client.get("/api/logbook")
@@ -1787,6 +1683,155 @@ async def test_logbook_entity_filter_with_automations(hass, hass_client):
     json_dict = await response.json()
     assert len(json_dict) == 1
     assert json_dict[0]["entity_id"] == entity_id_second
+
+
+async def test_filter_continuous_sensor_values(hass, hass_client):
+    """Test remove continuous sensor events from logbook."""
+    await hass.async_add_executor_job(init_recorder_component, hass)
+    await async_setup_component(hass, "logbook", {})
+    await hass.async_add_job(hass.data[recorder.DATA_INSTANCE].block_till_done)
+
+    entity_id_test = "switch.test"
+    hass.states.async_set(entity_id_test, STATE_OFF)
+    hass.states.async_set(entity_id_test, STATE_ON)
+    entity_id_second = "sensor.bla"
+    hass.states.async_set(entity_id_second, STATE_OFF, {"unit_of_measurement": "foo"})
+    hass.states.async_set(entity_id_second, STATE_ON, {"unit_of_measurement": "foo"})
+    entity_id_third = "light.bla"
+    hass.states.async_set(entity_id_third, STATE_OFF, {"unit_of_measurement": "foo"})
+    hass.states.async_set(entity_id_third, STATE_ON, {"unit_of_measurement": "foo"})
+
+    await hass.async_add_job(partial(trigger_db_commit, hass))
+    await hass.async_block_till_done()
+    await hass.async_add_job(hass.data[recorder.DATA_INSTANCE].block_till_done)
+
+    client = await hass_client()
+
+    # Today time 00:00:00
+    start = dt_util.utcnow().date()
+    start_date = datetime(start.year, start.month, start.day)
+
+    # Test today entries without filters
+    response = await client.get(f"/api/logbook/{start_date.isoformat()}")
+    assert response.status == 200
+    response_json = await response.json()
+
+    assert len(response_json) == 2
+    assert response_json[0]["entity_id"] == entity_id_test
+    assert response_json[1]["entity_id"] == entity_id_third
+
+
+async def test_exclude_new_entities(hass, hass_client):
+    """Test if events are excluded on first update."""
+    await hass.async_add_executor_job(init_recorder_component, hass)
+    await async_setup_component(hass, "logbook", {})
+    await hass.async_add_job(hass.data[recorder.DATA_INSTANCE].block_till_done)
+
+    entity_id = "climate.bla"
+    entity_id2 = "climate.blu"
+
+    hass.states.async_set(entity_id, STATE_OFF)
+    hass.states.async_set(entity_id2, STATE_ON)
+    hass.states.async_set(entity_id2, STATE_OFF)
+    hass.bus.async_fire(EVENT_HOMEASSISTANT_START)
+
+    await hass.async_add_job(partial(trigger_db_commit, hass))
+    await hass.async_block_till_done()
+    await hass.async_add_job(hass.data[recorder.DATA_INSTANCE].block_till_done)
+
+    client = await hass_client()
+
+    # Today time 00:00:00
+    start = dt_util.utcnow().date()
+    start_date = datetime(start.year, start.month, start.day)
+
+    # Test today entries without filters
+    response = await client.get(f"/api/logbook/{start_date.isoformat()}")
+    assert response.status == 200
+    response_json = await response.json()
+
+    assert len(response_json) == 2
+    assert response_json[0]["entity_id"] == entity_id2
+    assert response_json[1]["domain"] == "homeassistant"
+    assert response_json[1]["message"] == "started"
+
+
+async def test_exclude_removed_entities(hass, hass_client):
+    """Test if events are excluded on last update."""
+    await hass.async_add_executor_job(init_recorder_component, hass)
+    await async_setup_component(hass, "logbook", {})
+    await hass.async_add_job(hass.data[recorder.DATA_INSTANCE].block_till_done)
+
+    entity_id = "climate.bla"
+    entity_id2 = "climate.blu"
+
+    hass.states.async_set(entity_id, STATE_ON)
+    hass.states.async_set(entity_id, STATE_OFF)
+
+    hass.bus.async_fire(EVENT_HOMEASSISTANT_START)
+
+    hass.states.async_set(entity_id2, STATE_ON)
+    hass.states.async_set(entity_id2, STATE_OFF)
+
+    hass.states.async_remove(entity_id)
+    hass.states.async_remove(entity_id2)
+
+    await hass.async_add_job(partial(trigger_db_commit, hass))
+    await hass.async_block_till_done()
+    await hass.async_add_job(hass.data[recorder.DATA_INSTANCE].block_till_done)
+
+    client = await hass_client()
+
+    # Today time 00:00:00
+    start = dt_util.utcnow().date()
+    start_date = datetime(start.year, start.month, start.day)
+
+    # Test today entries without filters
+    response = await client.get(f"/api/logbook/{start_date.isoformat()}")
+    assert response.status == 200
+    response_json = await response.json()
+
+    assert len(response_json) == 3
+    assert response_json[0]["entity_id"] == entity_id
+    assert response_json[1]["domain"] == "homeassistant"
+    assert response_json[1]["message"] == "started"
+    assert response_json[2]["entity_id"] == entity_id2
+
+
+async def test_exclude_attribute_changes(hass, hass_client):
+    """Test if events of attribute changes are filtered."""
+    await hass.async_add_executor_job(init_recorder_component, hass)
+    await async_setup_component(hass, "logbook", {})
+    await hass.async_add_job(hass.data[recorder.DATA_INSTANCE].block_till_done)
+
+    hass.bus.async_fire(EVENT_HOMEASSISTANT_START)
+
+    hass.states.async_set("light.kitchen", STATE_OFF)
+    hass.states.async_set("light.kitchen", STATE_ON, {"brightness": 100})
+    hass.states.async_set("light.kitchen", STATE_ON, {"brightness": 200})
+    hass.states.async_set("light.kitchen", STATE_ON, {"brightness": 300})
+    hass.states.async_set("light.kitchen", STATE_ON, {"brightness": 400})
+
+    await hass.async_block_till_done()
+
+    await hass.async_add_job(partial(trigger_db_commit, hass))
+    await hass.async_block_till_done()
+
+    client = await hass_client()
+
+    # Today time 00:00:00
+    start = dt_util.utcnow().date()
+    start_date = datetime(start.year, start.month, start.day)
+
+    # Test today entries without filters
+    response = await client.get(f"/api/logbook/{start_date.isoformat()}")
+    assert response.status == 200
+    response_json = await response.json()
+
+    assert len(response_json) == 2
+    assert response_json[0]["domain"] == "homeassistant"
+    assert response_json[1]["message"] == "turned on"
+    assert response_json[1]["entity_id"] == "light.kitchen"
 
 
 class MockLazyEventPartialState(ha.Event):
