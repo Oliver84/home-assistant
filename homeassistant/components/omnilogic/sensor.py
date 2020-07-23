@@ -94,7 +94,7 @@ class OmnilogicSensor(Entity):
                 "avgSaltLevel"
             )
         elif self._kind == "pool_chlorinator":
-            self._state = self.coordinator.data[0][0]["BOWS"][0]["Chlorinator"].get(
+            self._state = self.coordinator.data[0]["BOWS"][0]["Chlorinator"].get(
                 "Timed-Percent"
             )
         elif self._kind == "air_temperature":
