@@ -1,23 +1,17 @@
 """The Omnilogic integration."""
 import asyncio
-import json
-import logging
 from datetime import timedelta
+import logging
 
-import async_timeout
-from homeassistant.exceptions import ConfigEntryNotReady
-
-
-import aiohttp
 from omnilogic import OmniLogic
 import voluptuous as vol
 
+# from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import CONF_PASSWORD, CONF_USERNAME
 from homeassistant.core import HomeAssistant
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
-
+from homeassistant.exceptions import ConfigEntryNotReady
+from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 
 from .const import DOMAIN
 
@@ -42,7 +36,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
     password = conf[CONF_PASSWORD]
 
     async def async_update_data():
-        """Fetch data from API endpoint"""
+        """Fetch data from API endpoint."""
         api = OmniLogic(username, password)
         data = await api.get_telemetry_data()
         await api.close()
