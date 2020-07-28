@@ -1,4 +1,5 @@
-"""Support for Omnilogic Sensors."""
+"""Support for the Omnilogic integration sensors."""
+
 from datetime import timedelta
 import logging
 
@@ -111,7 +112,7 @@ class OmnilogicSensor(Entity):
 
     @property
     def state(self):
-        """Return the state."""
+        """Return the state of the sensor."""
         return self._state
 
     async def async_update(self):
