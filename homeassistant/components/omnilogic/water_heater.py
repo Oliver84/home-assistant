@@ -6,7 +6,7 @@ import logging
 from homeassistant.const import TEMP_CELSIUS, TEMP_FAHRENHEIT, UNIT_PERCENTAGE
 from homeassistant.helpers.entity import Entity
 from homeassistant.components.sensor import ENTITY_ID_FORMAT
-from homeassistant.components.water_heater import WaterHeaterEntity, SUPPORT_OPERATION_MODE, STATE_OFF, STATE_ON
+from homeassistant.components.water_heater import WaterHeaterEntity, SUPPORT_TARGET_TEMPERATURE, SUPPORT_OPERATION_MODE, STATE_OFF, STATE_ON
 
 from .const import DOMAIN
 
@@ -34,7 +34,7 @@ class OmnilogicHeater(WaterHeaterEntity):
         """Initialize the Heater"""
 
         sensorname = "omni_" + backyard["BackyardName"].replace(" ", "_") + "_" + bow["Name"].replace(" ", "_") + "_" + virtualheater["Name"].replace(" ", "_")
-        self._name = virtualHeater["Name"]
+        self._name = virtualheater["Name"]
         self.entity_id = ENTITY_ID_FORMAT.format(sensorname)
         self._icon = "mdi:water-boiler"
         self._support_flags = SUPPORT_FLAGS_HEATER
@@ -43,11 +43,11 @@ class OmnilogicHeater(WaterHeaterEntity):
         self._operation_list = [STATE_ON, STATE_OFF]
         self._current_operation = None
         self._current_temperature = None
-        self._max_temp = virtualheater["Max-Settable-Water-Temp"]
-        self._min_temp = virtualheater["Min-Settable-Water-Temp"]
+        self._max_temp = float(virtualheater["Max-Settable-Water-Temp"])
+        self._min_temp = float(virtualheater["Min-Settable-Water-Temp"])
         self.attrs = {}
         self.attrs["MspSystemId"] = backyard["systemId"]
-        self.attrs["SystemId"] = virtualheater["System_Id"]
+        self.attrs["SystemId"] = virtualheater["System-Id"]
         self.coordinator = coordinator
         self.bow = bow
         self.virtualheater = virtualheater
@@ -101,7 +101,7 @@ class OmnilogicHeater(WaterHeaterEntity):
     @property
     def min_temp(self):
         """Return the min temperature """
-        return self._min temp
+        return self._min_temp
 
     @property
     def supported_features(self):
@@ -152,7 +152,7 @@ class OmnilogicHeater(WaterHeaterEntity):
         if self.bow["Heater"].get("heaterState") == "0":
             self._current_operation = STATE_OFF
 
-        self._current_temperature = self.bow.get("waterTemp")
+        self._current_temperature = float(self.bow.get("waterTemp"))
 
-        self._target_temperature = self.virtualheater.get("Current-Set-Point")
+        self._target_temperature = float(self.virtualheater.get("Current-Set-Point"))
     
