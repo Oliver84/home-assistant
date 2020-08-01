@@ -3,12 +3,18 @@
 from datetime import timedelta
 import logging
 
-from homeassistant.const import TEMP_CELSIUS, TEMP_FAHRENHEIT, UNIT_PERCENTAGE
+from omnilogic import OmniLogic
+from homeassistant.config_entries import ConfigEntry
+from homeassistant.const import TEMP_CELSIUS, TEMP_FAHRENHEIT, UNIT_PERCENTAGE, ATTR_TEMPERATURE, CONF_PASSWORD, CONF_USERNAME
 from homeassistant.helpers.entity import Entity
 from homeassistant.components.sensor import ENTITY_ID_FORMAT
 from homeassistant.components.water_heater import WaterHeaterEntity, SUPPORT_TARGET_TEMPERATURE, SUPPORT_OPERATION_MODE, STATE_OFF, STATE_ON
 
 from .const import DOMAIN
+
+conf = entry.data
+username = conf[CONF_USERNAME]
+password = conf[CONF_PASSWORD]
 
 SCAN_INTERVAL = timedelta(seconds=30)
 _LOGGER = logging.getLogger(__name__)
@@ -155,4 +161,31 @@ class OmnilogicHeater(WaterHeaterEntity):
         self._current_temperature = float(self.bow.get("waterTemp"))
 
         self._target_temperature = float(self.virtualheater.get("Current-Set-Point"))
-    
+
+    async def set_temperature(self, **kwargs):
+        """Set the water heater temperature set-point"""
+        self._target_temperature = kwargs.get(ATTR_TEMPERATURE)
+
+        api_client = Omnilogic(username, password)
+
+        success = await api_client.set_heater_temperature(int(self.attrs.get("MspSystemId")), int(self.attrs.get("SystemId")), int(self._target_temperature))
+
+        if success:
+            self.async_schedule_update_ha_state()
+
+    async def set_operation_mode(self, operation_mode):
+        """Turn the heater on or off"""
+        self._current_operation = operation_mode 
+
+        """Call OmniLogic to update On/Off"""
+        heaterEnable = True
+        if self._current_operation == "off":
+            heaterEnable = False
+
+        api_client = OmniLogic(username, password)
+
+        success = await api_client.set_heater_onoff(int(self.attrs.get("MspSystemId")), int(self.attrs.get("SystemId")), heaterEnable)
+
+        if success:
+            self.async_schedule_update_ha_state()
+
