@@ -20,7 +20,7 @@ CONFIG_SCHEMA = vol.Schema({DOMAIN: vol.Schema({})}, extra=vol.ALLOW_EXTRA)
 
 # TODO List the platforms that you want to support.
 # For your initial PR, limit it to 1 platform.
-PLATFORMS = ["sensor"]
+PLATFORMS = ["sensor", "light"]
 
 
 async def async_setup(hass: HomeAssistant, config: dict):
@@ -59,6 +59,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
     hass.data[DOMAIN][entry.entry_id] = coordinator
 
     for component in PLATFORMS:
+        _LOGGER.info(f"Adding platform: {component}")
         hass.async_create_task(
             hass.config_entries.async_forward_entry_setup(entry, component)
         )
