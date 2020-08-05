@@ -45,6 +45,7 @@ async def async_setup_entry(
                 )
                 lights += [
                     OmnilogicLight(
+                        coordinator,
                         systemId,
                         lightId,
                         lightState,
@@ -65,9 +66,19 @@ class OmnilogicLight(LightEntity):
     """Representation of an OmniLogic Light."""
 
     def __init__(
-        self, systemId, light, state, effect, backyard, bow, username, password
+        self,
+        coordinator,
+        systemId,
+        light,
+        state,
+        effect,
+        backyard,
+        bow,
+        username,
+        password,
     ):
         """Initialize an OmniLogic Light."""
+        self._coordinator = coordinator
         self._systemid = systemId
         self._light = light
         self._backyard = backyard
@@ -138,13 +149,17 @@ class OmnilogicLight(LightEntity):
         """Instruct the light to turn off."""
         self.async_turn_off()
 
-    # def update(self):
-    #     """Fetch new state data for this light.
-    #     This is the only method that should fetch new data for Home Assistant.
-    #     """
-    #     self._light.update()
-    #     self._state = self._light.is_on()
-    #     self._brightness = self._light.brightness
+    async def async_update(self):
+        """Update Omnilogic entity."""
+        await self._coordinator.async_request_refresh()
+
+        for backyard in self._coordinator.data:
+            systemId = backyard.get("systemId")
+            for bow in backyard["BOWS"]:
+                if bow.get("Lights"):
+                    if self._id == int(bow.get("Lights")[0].get("systemId")):
+                        self._state = int(bow.get("Lights")[0].get("lightState"))
+                        self._effect = int(bow.get("Lights")[0].get("currentShow"))
 
     async def async_set_effect(self, effect):
         """Set the switch status."""
