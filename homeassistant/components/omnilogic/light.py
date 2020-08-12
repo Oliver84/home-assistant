@@ -40,6 +40,7 @@ async def async_setup_entry(
                 lightId = int(bow.get("Lights")[0].get("systemId"))
                 lightState = int(bow.get("Lights")[0].get("lightState"))
                 lightEffect = int(bow.get("Lights")[0].get("currentShow"))
+                lightName = bow.get("Lights")[0].get("Name")
                 _LOGGER.info(
                     f"Light: {lightId}, State: {lightState}, Effect: {lightEffect}"
                 )
@@ -50,6 +51,7 @@ async def async_setup_entry(
                         lightId,
                         lightState,
                         lightEffect,
+                        lightName,
                         backyard,
                         bow,
                         username,
@@ -72,6 +74,7 @@ class OmnilogicLight(LightEntity):
         light,
         state,
         effect,
+        lightname,
         backyard,
         bow,
         username,
@@ -87,6 +90,7 @@ class OmnilogicLight(LightEntity):
         self._name = bow["Name"]
         self._state = state
         self._effect = effect
+        self._lightname = lightname
         self._brightness = None
         self._id = int(light)
         self._username = username
@@ -95,7 +99,7 @@ class OmnilogicLight(LightEntity):
     @property
     def name(self):
         """Return the display name of this light."""
-        return self._name
+        return self._name + "_" + self._lightname
 
     # @property
     # def device_info(self):
