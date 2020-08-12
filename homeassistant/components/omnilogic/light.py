@@ -101,6 +101,12 @@ class OmnilogicLight(LightEntity):
         """Return the display name of this light."""
         return self._name + "_" + self._lightname
 
+    @property
+    def unique_id(self) -> str:
+        """Return a unique, Home Assistant friendly identifier for this entity."""
+        # need a more unique id
+        return self._name + "_" + self._lightname + "_" + str(self._id)
+
     # @property
     # def device_info(self):
     #     return {
