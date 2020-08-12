@@ -36,18 +36,20 @@ async def async_setup_entry(
     for backyard in coordinator.data:
         systemId = backyard.get("systemId")
         for bow in backyard["BOWS"]:
+            poolId = bow.get("systemId")
             if bow.get("Lights"):
                 lightId = int(bow.get("Lights")[0].get("systemId"))
                 lightState = int(bow.get("Lights")[0].get("lightState"))
                 lightEffect = int(bow.get("Lights")[0].get("currentShow"))
                 lightName = bow.get("Lights")[0].get("Name")
                 _LOGGER.info(
-                    f"Light: {lightId}, State: {lightState}, Effect: {lightEffect}"
+                    f"Light: {lightId}, PoolID: {poolId}, State: {lightState}, Effect: {lightEffect}"
                 )
                 lights += [
                     OmnilogicLight(
                         coordinator,
                         systemId,
+                        poolId,
                         lightId,
                         lightState,
                         lightEffect,
@@ -71,6 +73,7 @@ class OmnilogicLight(LightEntity):
         self,
         coordinator,
         systemId,
+        poolId,
         light,
         state,
         effect,
@@ -83,6 +86,7 @@ class OmnilogicLight(LightEntity):
         """Initialize an OmniLogic Light."""
         self._coordinator = coordinator
         self._systemid = systemId
+        self._poolid = poolId
         self._light = light
         self._backyard = backyard
         self._backyardName = backyard["BackyardName"]
@@ -178,7 +182,9 @@ class OmnilogicLight(LightEntity):
             omni = OmniLogic(self._username, self._password)
             await omni.connect()
             # _LOGGER.info("#####CHANGING LIGHT EFFECT")
-            success = await omni.set_lightshow(self._systemid, 1, self._id, effect)
+            success = await omni.set_lightshow(
+                self._systemid, self._poolid, self._id, effect
+            )
             # self._state = 1
             self._effect = effect
         except OmniLogicException as error:
@@ -200,7 +206,7 @@ class OmnilogicLight(LightEntity):
             await omni.connect()
             # _LOGGER.info("#####TURNING ON LIGHT")
             success = await omni.set_relay_valve(
-                self._systemid, 1, self._id, 1
+                self._systemid, self._poolid, self._id, 1
             )  ##Need to pull pool id
             self._state = 1
             self._effect = effect
@@ -214,7 +220,9 @@ class OmnilogicLight(LightEntity):
             omni = OmniLogic(self._username, self._password)
             await omni.connect()
             # _LOGGER.info("#####TURNING OFF LIGHT")
-            success = await omni.set_relay_valve(self._systemid, 1, self._id, 0)
+            success = await omni.set_relay_valve(
+                self._systemid, self._poolid, self._id, 0
+            )
             self._state = 0
         except OmniLogicException as error:
             _LOGGER.error("Setting status to %s: %r", self.name, error)
