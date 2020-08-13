@@ -37,29 +37,30 @@ async def async_setup_entry(
         systemId = backyard.get("systemId")
         for bow in backyard["BOWS"]:
             poolId = bow.get("systemId")
-            if bow.get("Lights"):
-                lightId = int(bow.get("Lights")[0].get("systemId"))
-                lightState = int(bow.get("Lights")[0].get("lightState"))
-                lightEffect = int(bow.get("Lights")[0].get("currentShow"))
-                lightName = bow.get("Lights")[0].get("Name")
-                _LOGGER.info(
-                    f"Light: {lightId}, PoolID: {poolId}, State: {lightState}, Effect: {lightEffect}"
-                )
-                lights += [
-                    OmnilogicLight(
-                        coordinator,
-                        systemId,
-                        poolId,
-                        lightId,
-                        lightState,
-                        lightEffect,
-                        lightName,
-                        backyard,
-                        bow,
-                        username,
-                        password,
+            if len(bow.get("Lights")) > 0:
+                for light in bow.get("Lights"):
+                    lightId = int(bow.get("Lights")[0].get("systemId"))
+                    lightState = int(bow.get("Lights")[0].get("lightState"))
+                    lightEffect = int(bow.get("Lights")[0].get("currentShow"))
+                    lightName = bow.get("Lights")[0].get("Name")
+                    _LOGGER.info(
+                        f"Light: {lightId}, PoolID: {poolId}, State: {lightState}, Effect: {lightEffect}"
                     )
-                ]
+                    lights += [
+                        OmnilogicLight(
+                            coordinator,
+                            systemId,
+                            poolId,
+                            lightId,
+                            lightState,
+                            lightEffect,
+                            lightName,
+                            backyard,
+                            bow,
+                            username,
+                            password,
+                        )
+                    ]
 
     # Add devices
     # async_add_entities(OmnilogicLight(light, backyard, bow) for light, backyard, bow in lights
