@@ -39,10 +39,10 @@ async def async_setup_entry(
             poolId = bow.get("systemId")
             if len(bow.get("Lights")) > 0:
                 for light in bow.get("Lights"):
-                    lightId = int(bow.get("Lights")[0].get("systemId"))
-                    lightState = int(bow.get("Lights")[0].get("lightState"))
-                    lightEffect = int(bow.get("Lights")[0].get("currentShow"))
-                    lightName = bow.get("Lights")[0].get("Name")
+                    lightId = int(light.get("systemId"))
+                    lightState = int(light.get("lightState"))
+                    lightEffect = int(light.get("currentShow"))
+                    lightName = light.get("Name")
                     _LOGGER.info(
                         f"Light: {lightId}, PoolID: {poolId}, State: {lightState}, Effect: {lightEffect}"
                     )
