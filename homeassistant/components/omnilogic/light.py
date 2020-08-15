@@ -163,11 +163,6 @@ class OmnilogicLight(LightEntity):
                                 self._effect = int(
                                     bow.get("Lights")[0].get("currentShow")
                                 )
-                                _LOGGER.debug("LIGHT####: {self._state}")
-
-        _LOGGER.info(
-            f"Light: {self._lightId}, PoolID: {self._poolid}, State: {self._state}, Effect: {self._effect}"
-        )
 
     async def async_set_effect(self, effect):
         """Set the switch status."""
