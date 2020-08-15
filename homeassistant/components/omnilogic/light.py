@@ -2,18 +2,11 @@
 import logging
 
 from omnilogic import LightEffect, OmniLogic, OmniLogicException
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_PASSWORD, CONF_USERNAME
 
 # Import the device class from the component that you want to support
-from homeassistant.components.light import (
-    ATTR_BRIGHTNESS,
-    ATTR_EFFECT,
-    ATTR_EFFECT_LIST,
-    SUPPORT_EFFECT,
-    PLATFORM_SCHEMA,
-    LightEntity,
-)
+from homeassistant.components.light import ATTR_EFFECT, SUPPORT_EFFECT, LightEntity
+from homeassistant.config_entries import ConfigEntry
+from homeassistant.const import CONF_PASSWORD, CONF_USERNAME
 import homeassistant.helpers.config_validation as cv
 
 from .const import DOMAIN
@@ -106,6 +99,7 @@ class OmnilogicLight(LightEntity):
     @property
     def brightness(self):
         """Return the brightness of the light.
+
         This method is optional. Removing it indicates to Home Assistant
         that brightness is not supported for this light.
         """
@@ -118,7 +112,7 @@ class OmnilogicLight(LightEntity):
 
     @property
     def effect(self):
-        """ Return int that represents the light effect"""
+        """Return int that represents the light effect."""
         return self._effect
 
     @property
@@ -131,18 +125,6 @@ class OmnilogicLight(LightEntity):
         """Return the list of features supported by the light."""
 
         return SUPPORT_EFFECT
-
-    # def turn_on(self, **kwargs):
-    #     """Instruct the light to turn on.
-    #     You can skip the brightness part if your light does not support
-    #     brightness control.
-    #     """
-    #     # self._light.brightness = kwargs.get(ATTR_BRIGHTNESS, 255)
-    #     self.async_turn_on()
-
-    # def turn_off(self, **kwargs):
-    #     """Instruct the light to turn off."""
-    #     self.async_turn_off()
 
     async def async_update(self):
         """Update Omnilogic entity."""
@@ -165,16 +147,16 @@ class OmnilogicLight(LightEntity):
                                 )
 
     async def async_set_effect(self, effect):
-        """Set the switch status."""
+        """Set the light show effect."""
 
         try:
             omni = OmniLogic(self._username, self._password)
             await omni.connect()
-            # _LOGGER.info("#####CHANGING LIGHT EFFECT")
-            success = await omni.set_lightshow(
+            await omni.set_lightshow(
                 self._systemid, self._poolid, self._lightId, effect
             )
             self._effect = effect
+            await omni.close()
         except OmniLogicException as error:
             _LOGGER.error("Setting status to %s: %r", self.name, error)
 
@@ -192,12 +174,10 @@ class OmnilogicLight(LightEntity):
         try:
             omni = OmniLogic(self._username, self._password)
             await omni.connect()
-            # _LOGGER.info("#####TURNING ON LIGHT")
-            success = await omni.set_relay_valve(
-                self._systemid, self._poolid, self._lightId, 1
-            )  ##Need to pull pool id
+            await omni.set_relay_valve(self._systemid, self._poolid, self._lightId, 1)
             self._state = 1
             self._effect = effect
+            await omni.close()
             await self._coordinator.async_request_refresh()
         except OmniLogicException as error:
             _LOGGER.error("Setting status to %s: %r", self.name, error)
@@ -208,10 +188,9 @@ class OmnilogicLight(LightEntity):
         try:
             omni = OmniLogic(self._username, self._password)
             await omni.connect()
-            # _LOGGER.info("#####TURNING OFF LIGHT")
-            success = await omni.set_relay_valve(
-                self._systemid, self._poolid, self._lightId, 0
-            )
+            await omni.set_relay_valve(self._systemid, self._poolid, self._lightId, 0)
             self._state = 0
+            await omni.close()
+            await self._coordinator.async_request_refresh()
         except OmniLogicException as error:
             _LOGGER.error("Setting status to %s: %r", self.name, error)
