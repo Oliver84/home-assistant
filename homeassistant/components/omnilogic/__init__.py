@@ -47,7 +47,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
         _LOGGER,
         name="Omnilogic",
         update_method=async_update_data,
-        update_interval=timedelta(seconds=10),
+        update_interval=timedelta(seconds=30),
     )
 
     await coordinator.async_refresh()
