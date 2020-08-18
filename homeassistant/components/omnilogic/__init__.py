@@ -17,7 +17,7 @@ from .const import DOMAIN
 _LOGGER = logging.getLogger(__name__)
 CONFIG_SCHEMA = vol.Schema({DOMAIN: vol.Schema({})}, extra=vol.ALLOW_EXTRA)
 
-PLATFORMS = ["sensor"]
+PLATFORMS = ["sensor","light","switch"]
 
 
 async def async_setup(hass: HomeAssistant, config: dict):
@@ -47,7 +47,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
         _LOGGER,
         name="Omnilogic",
         update_method=async_update_data,
-        update_interval=timedelta(seconds=30),
+        update_interval=timedelta(seconds=10),
     )
 
     await coordinator.async_refresh()
