@@ -128,16 +128,13 @@ class OmnilogicLight(LightEntity):
     async def async_update(self):
         """Update Omnilogic entity."""
         await self._coordinator.async_request_refresh()
-
+        _LOGGER.debug(f"Updating state of lights")
         for backyard in self._coordinator.data:
             if self._systemid == backyard.get("systemId"):
                 for bow in backyard["BOWS"]:
                     if len(bow.get("Lights")) > 0:
                         for light in bow.get("Lights"):
                             if self._lightId == int(light.get("systemId")):
-                                _LOGGER.debug(
-                                    f"Updating state of light {self._lightId}"
-                                )
                                 self._state = int(
                                     bow.get("Lights")[0].get("lightState")
                                 )
