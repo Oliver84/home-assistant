@@ -25,7 +25,7 @@ async def async_setup_entry(
     lights = []
     _LOGGER.info("Setting up Light platform")
     coordinator = hass.data[DOMAIN][entry.entry_id]
-    _LOGGER.debug(f"COORDINATOR: {coordinator.data}")
+    # _LOGGER.debug(f"COORDINATOR: {coordinator.data}")
     for backyard in coordinator.data:
         systemId = backyard.get("systemId")
         for bow in backyard["BOWS"]:
