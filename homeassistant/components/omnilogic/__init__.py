@@ -17,7 +17,7 @@ from .const import DOMAIN
 _LOGGER = logging.getLogger(__name__)
 CONFIG_SCHEMA = vol.Schema({DOMAIN: vol.Schema({})}, extra=vol.ALLOW_EXTRA)
 
-PLATFORMS = ["sensor","light","switch"]
+PLATFORMS = ["sensor", "light", "switch"]
 
 
 async def async_setup(hass: HomeAssistant, config: dict):
@@ -34,6 +34,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
 
     async def async_update_data():
         """Fetch data from API endpoint."""
+        _LOGGER.debug(f"Updating the coordinator data.")
         try:
             api = OmniLogic(username, password)
             data = await api.get_telemetry_data()
