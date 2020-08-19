@@ -33,7 +33,7 @@ async def async_setup_entry(
     switches = []
     _LOGGER.info("Setting up Switch platform")
     coordinator = hass.data[DOMAIN][entry.entry_id]
-    # _LOGGER.debug(f"COORDINATOR: {coordinator.data}")
+    _LOGGER.debug(f"COORDINATOR: {coordinator.data}")
     for backyard in coordinator.data:
         systemId = int(backyard.get("systemId"))
         poolId = None
@@ -195,19 +195,17 @@ class OmnilogicSwitch(SwitchEntity):
 
         for backyard in self._coordinator.data:
             temp = backyard.get("systemId")
-            _LOGGER.debug(f"######### {type(temp)} {type(self._systemid)}")
             if self._systemid == int(backyard.get("systemId")):
-                _LOGGER.debug(backyard)
                 if len(backyard.get("Relays")) > 0:
                     for switch in backyard.get("Relays"):
-                        if switch.get(systemId) == self._switchId:
+                        if switch.get("systemId") == self._switchId:
                             self._switchSpeed = None
                             self._switchState = int(switch.get("relayState"))
                             self._switchFunction = switch.get("Function")
 
                 # if len(backyard.get("Pumps")) > 0:
                 #     for switch in backyard.get("Pumps"):
-                #         if switch.get(systemId) == self._switchId:
+                #         if switch.get("systemId") == self._switchId:
                 #             self._switchSpeed = None
                 #             # self._switchId = int(switch.get("systemId"))
                 #             self._switchState = int(switch.get("relayState"))
@@ -218,19 +216,18 @@ class OmnilogicSwitch(SwitchEntity):
                     # poolId = bow.get("systemId")
                     if len(bow.get("Relays")) > 0:
                         for switch in bow.get("Relays"):
-                            if switch.get(systemId) == self._switchId:
+                            if switch.get("systemId") == self._switchId:
                                 self._switchSpeed = None
                                 self._switchState = int(switch.get("relayState"))
                                 self._switchFunction = switch.get("Function")
 
                     if len(bow.get("Pumps")) > 0:
                         for switch in bow.get("Pumps"):
-                            if switch.get(systemId) == self._switchId:
+                            if switch.get("systemId") == self._switchId:
                                 self._switchSpeed = None
                                 self._switchState = int(switch.get("relayState"))
                                 self._switchFunction = switch.get("Function")
-                    if bow.get("Filter"):
-                        _LOGGER.debug(bow.get("Filter"))
+
                     if (
                         bow.get("Filter")
                         and int(bow.get("Filter").get("systemId")) == self._switchId
@@ -238,9 +235,6 @@ class OmnilogicSwitch(SwitchEntity):
                         self._switchSpeed = int(bow.get("Filter").get("filterSpeed"))
                         self._switchFunction = bow.get("Filter").get("Filter-Type")
                         self._switchState = int(bow.get("Filter").get("filterState"))
-                        _LOGGER.debug(
-                            f"SET FILTER PUMP:     State: {self._switchState} Speed: {self._switchSpeed} Function: {self._switchFunction}"
-                        )
 
     async def async_turn_on(self, **kwargs):
         """Set the switch status."""
