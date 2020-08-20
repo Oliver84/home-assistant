@@ -10,7 +10,8 @@
             "user": {
                 "data": {
                     "password": "Password",
-                    "username": "Username"
+                    "username": "Username",
+                    "polling_interval": "Polling Interval"
                 },
                 "description": "Please enter the username and password for your Omnilogic account.",
                 "title": "Connect to Hayward Omnilogic"

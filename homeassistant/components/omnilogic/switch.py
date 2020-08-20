@@ -8,7 +8,7 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import CONF_PASSWORD, CONF_USERNAME
 import homeassistant.helpers.config_validation as cv
 
-from .const import DOMAIN
+from .const import DOMAIN, DEFAULT_PUMP_SPEED
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -257,12 +257,12 @@ class OmnilogicSwitch(SwitchEntity):
         _LOGGER.debug(f"FUNCTION: {self._switchFunction}")
         if "RLY" in self._switchFunction:
             onValue = 1
-        elif "PMP_SINGLE_SPEED" in self._switchFunction:
+        elif "PMP_SINGLE_SPEED" in self._switchFunction or not self._lastSpeed:
             onValue = 100
         elif self._lastSpeed:
             onValue = self._lastSpeed
         else:
-            onValue = 85
+            onValue = 100
 
         _LOGGER.debug(f"{self._systemid} {self._poolid} {self._switchId} {onValue}")
         try:
