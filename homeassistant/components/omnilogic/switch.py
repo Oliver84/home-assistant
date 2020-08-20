@@ -1,16 +1,18 @@
 """Platform for switch integration."""
 import logging
+import voluptuous as vol
 
 from omnilogic import OmniLogic, OmniLogicException
 
 from homeassistant.components.switch import DOMAIN, SwitchEntity
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import CONF_PASSWORD, CONF_USERNAME
-import homeassistant.helpers.config_validation as cv
+from homeassistant.helpers import config_validation as cv, entity_platform
 
 from .const import DOMAIN
 
 _LOGGER = logging.getLogger(__name__)
+SERVICE_SET_SPEED = "set_pump_speed"
 
 
 def add_switch(switch, switches):
@@ -118,6 +120,13 @@ async def async_setup_entry(
     # Add devices
     async_add_entities(switches, update_before_add=True)
 
+    # register service
+    platform = entity_platform.current_platform.get()
+
+    platform.async_register_entity_service(
+        SERVICE_SET_SPEED, {vol.Required("speed"): cv.positive_int,}, "async_set_speed",
+    )
+
 
 class OmnilogicSwitch(SwitchEntity):
     """Representation of an OmniLogic Switch."""
@@ -143,6 +152,8 @@ class OmnilogicSwitch(SwitchEntity):
         self._switchId = int(switch.get("systemId"))
         self._switchName = switch.get("Name")
         self._switchState = None
+        self._maxSpeed = None
+        self._minSpeed = None
 
     @property
     def name(self):
@@ -248,12 +259,63 @@ class OmnilogicSwitch(SwitchEntity):
                         self._switchSpeed = int(bow.get("Filter").get("filterSpeed"))
                         self._switchFunction = bow.get("Filter").get("Filter-Type")
                         self._switchState = int(bow.get("Filter").get("filterState"))
+                        self._maxSpeed = int(bow.get("Filter").get("Max-Pump-Speed"))
+                        self._minSpeed = int(bow.get("Filter").get("Min-Pump-Speed"))
                         _LOGGER.debug(
                             f"Speed: {self._switchSpeed} State: {self._switchState} Function: {self._switchFunction}"
                         )
 
     async def async_turn_on(self, **kwargs):
         """Set the switch status."""
+        _LOGGER.debug(f"FUNCTION: {self._switchFunction}")
+        if "RLY" in self._switchFunction:
+            onValue = 1
+        elif "PMP_SINGLE_SPEED" in self._switchFunction:
+            onValue = 100
+        elif self._lastSpeed:
+            onValue = self._lastSpeed
+        else:
+            onValue = 85
+
+        await self.async_set_speed(onValue)
+
+        _LOGGER.debug(f"{self._systemid} {self._poolid} {self._switchId} {onValue}")
+        # try:
+        #     omni = OmniLogic(self._username, self._password)
+        #     await omni.connect()
+        #     await omni.set_relay_valve(
+        #         self._systemid, self._poolid, self._switchId, onValue
+        #     )
+        #     self._state = 1
+        # except OmniLogicException as error:
+        #     _LOGGER.error("Setting status to %s: %r", self.name, error)
+
+    async def async_turn_off(self):
+        """Set the switch status."""
+        _LOGGER.debug(f"Current speed: {self._switchSpeed}")
+        if self._switchSpeed:
+            self._lastSpeed = self._switchSpeed
+        try:
+            omni = OmniLogic(self._username, self._password)
+            await omni.connect()
+            await omni.set_relay_valve(self._systemid, self._poolid, self._switchId, 0)
+            self._state = 0
+        except OmniLogicException as error:
+            _LOGGER.error("Setting status to %s: %r", self.name, error)
+
+    async def async_set_speed(self, speed):
+        """Set the switch speed."""
+        if (
+            speed >= self._minSpeed
+            and speed <= self._maxSpeed
+            and "VARIABLE" in self._switchFunction
+        ):
+            self._lastSpeed = speed
+        else:
+            raise OmniLogicException(
+                "Cannot set speed. Speed is outside pump range or unsupported pump type."
+            )
+
         _LOGGER.debug(f"FUNCTION: {self._switchFunction}")
         if "RLY" in self._switchFunction:
             onValue = 1
@@ -272,19 +334,6 @@ class OmnilogicSwitch(SwitchEntity):
                 self._systemid, self._poolid, self._switchId, onValue
             )
             self._state = 1
-        except OmniLogicException as error:
-            _LOGGER.error("Setting status to %s: %r", self.name, error)
-
-    async def async_turn_off(self):
-        """Set the switch status."""
-        _LOGGER.debug(f"Current speed: {self._switchSpeed}")
-        if self._switchSpeed:
-            self._lastSpeed = self._switchSpeed
-        try:
-            omni = OmniLogic(self._username, self._password)
-            await omni.connect()
-            await omni.set_relay_valve(self._systemid, self._poolid, self._switchId, 0)
-            self._state = 0
         except OmniLogicException as error:
             _LOGGER.error("Setting status to %s: %r", self.name, error)
 
