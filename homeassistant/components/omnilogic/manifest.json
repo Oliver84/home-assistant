@@ -1,4 +1,5 @@
 {
+<<<<<<< HEAD
   "domain": "omnilogic",
   "name": "Hayward Omnilogic",
   "config_flow": true,
@@ -10,3 +11,20 @@
   "dependencies": [],
   "codeowners": ["@oliver84","@djtimca","@gentoosu"]
 }
+=======
+    "domain": "omnilogic",
+    "name": "Hayward Omnilogic",
+    "config_flow": true,
+    "documentation": "https://www.home-assistant.io/integrations/omnilogic",
+    "requirements": [
+        "omnilogic==0.3.4"
+    ],
+    "ssdp": [],
+    "zeroconf": [],
+    "homekit": {},
+    "dependencies": [],
+    "codeowners": [
+        "@oliver84"
+    ]
+}
+>>>>>>> Fix test failures. Remove unused code.
