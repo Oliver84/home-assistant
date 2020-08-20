@@ -9,7 +9,7 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import CONF_PASSWORD, CONF_USERNAME
 from homeassistant.helpers import config_validation as cv, entity_platform
 
-from .const import DOMAIN
+from .const import DOMAIN, DEFAULT_PUMP_SPEED
 
 _LOGGER = logging.getLogger(__name__)
 SERVICE_SET_SPEED = "set_pump_speed"
@@ -270,12 +270,12 @@ class OmnilogicSwitch(SwitchEntity):
         _LOGGER.debug(f"FUNCTION: {self._switchFunction}")
         if "RLY" in self._switchFunction:
             onValue = 1
-        elif "PMP_SINGLE_SPEED" in self._switchFunction:
+        elif "PMP_SINGLE_SPEED" in self._switchFunction or not self._lastSpeed:
             onValue = 100
         elif self._lastSpeed:
             onValue = self._lastSpeed
         else:
-            onValue = 85
+            onValue = 100
 
         await self.async_set_speed(onValue)
 

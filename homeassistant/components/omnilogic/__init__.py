@@ -12,7 +12,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import ConfigEntryNotReady, PlatformNotReady
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 
-from .const import DOMAIN
+from .const import DOMAIN, POLL_INTERVAL, DEFAULT_PUMP_SPEED
 
 _LOGGER = logging.getLogger(__name__)
 CONFIG_SCHEMA = vol.Schema({DOMAIN: vol.Schema({})}, extra=vol.ALLOW_EXTRA)
@@ -31,6 +31,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
     conf = entry.data
     username = conf[CONF_USERNAME]
     password = conf[CONF_PASSWORD]
+    polling_interval = conf[POLL_INTERVAL]
 
     async def async_update_data():
         """Fetch data from API endpoint."""
@@ -48,7 +49,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
         _LOGGER,
         name="Omnilogic",
         update_method=async_update_data,
-        update_interval=timedelta(seconds=10),
+        update_interval=timedelta(seconds=polling_interval),
     )
 
     await coordinator.async_refresh()
