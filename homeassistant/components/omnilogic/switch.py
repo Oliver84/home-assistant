@@ -1,10 +1,10 @@
 """Platform for switch integration."""
 import logging
-import voluptuous as vol
 
 from omnilogic import OmniLogic, OmniLogicException
+import voluptuous as vol
 
-from homeassistant.components.switch import DOMAIN, SwitchEntity
+from homeassistant.components.switch import SwitchEntity
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import CONF_PASSWORD, CONF_USERNAME
 from homeassistant.helpers import config_validation as cv, entity_platform
@@ -13,15 +13,6 @@ from .const import DOMAIN
 
 _LOGGER = logging.getLogger(__name__)
 SERVICE_SET_SPEED = "set_pump_speed"
-
-
-def add_switch(switch, switches):
-    switches += [
-        OmnilogicSwitch(
-            coordinator, systemId, poolId, backyard, bow, username, password,
-        )
-    ]
-    return switches
 
 
 async def async_setup_entry(
@@ -124,7 +115,7 @@ async def async_setup_entry(
     platform = entity_platform.current_platform.get()
 
     platform.async_register_entity_service(
-        SERVICE_SET_SPEED, {vol.Required("speed"): cv.positive_int,}, "async_set_speed",
+        SERVICE_SET_SPEED, {vol.Required("speed"): cv.positive_int}, "async_set_speed",
     )
 
 
@@ -203,9 +194,8 @@ class OmnilogicSwitch(SwitchEntity):
     async def async_update(self):
         """Update Omnilogic entity."""
         await self._coordinator.async_request_refresh()
-        _LOGGER.debug(f"Updating state of switches.")
+        _LOGGER.debug("Updating state of switches.")
         for backyard in self._coordinator.data:
-            temp = backyard.get("systemId")
             if self._systemid == int(backyard.get("systemId")):
                 if len(backyard.get("Relays")) > 0:
                     for switch in backyard.get("Relays"):
@@ -336,4 +326,3 @@ class OmnilogicSwitch(SwitchEntity):
             self._state = 1
         except OmniLogicException as error:
             _LOGGER.error("Setting status to %s: %r", self.name, error)
-
