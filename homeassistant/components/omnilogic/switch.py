@@ -9,7 +9,7 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import CONF_PASSWORD, CONF_USERNAME
 from homeassistant.helpers import config_validation as cv, entity_platform
 
-from .const import DOMAIN, DEFAULT_PUMP_SPEED
+from .const import DOMAIN
 
 _LOGGER = logging.getLogger(__name__)
 SERVICE_SET_SPEED = "set_pump_speed"
