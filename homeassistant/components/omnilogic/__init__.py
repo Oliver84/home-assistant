@@ -3,7 +3,7 @@ import asyncio
 from datetime import timedelta
 import logging
 
-from omnilogic import LoginException, OmniLogic
+from omnilogic import LoginException, OmniLogic, OmniLogicException
 import voluptuous as vol
 
 from homeassistant.config_entries import ConfigEntry
@@ -12,7 +12,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import ConfigEntryNotReady, PlatformNotReady
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 
-from .const import DOMAIN, POLL_INTERVAL
+from .const import COORDINATOR, DOMAIN, OMNI_API, POLL_INTERVAL
 
 _LOGGER = logging.getLogger(__name__)
 CONFIG_SCHEMA = vol.Schema({DOMAIN: vol.Schema({})}, extra=vol.ALLOW_EXTRA)
@@ -32,17 +32,25 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
     username = conf[CONF_USERNAME]
     password = conf[CONF_PASSWORD]
     polling_interval = conf[POLL_INTERVAL]
+    api = OmniLogic(username, password)
+
+    try:
+        await api.connect()
+        await api.get_telemetry_data()
+    except LoginException as e:
+        _LOGGER.debug(f"OmniLogic login error: {e}")
+        raise PlatformNotReady
+    except OmniLogicException as e:
+        _LOGGER.debug(f"OmniLogic API error: {e}")
 
     async def async_update_data():
         """Fetch data from API endpoint."""
-        _LOGGER.debug(f"Updating the coordinator data.")
+        _LOGGER.debug("Updating the coordinator data.")
         try:
-            api = OmniLogic(username, password)
             data = await api.get_telemetry_data()
-            await api.close()
             return data
-        except LoginException:
-            raise PlatformNotReady
+        except OmniLogicException as e:
+            _LOGGER.debug(f"OmniLogic API error: {e}")
 
     coordinator = DataUpdateCoordinator(
         hass,
@@ -58,7 +66,10 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
         raise ConfigEntryNotReady
 
     hass.data.setdefault(DOMAIN, {})
-    hass.data[DOMAIN][entry.entry_id] = coordinator
+    hass.data[DOMAIN][entry.entry_id] = {
+        COORDINATOR: coordinator,
+        OMNI_API: api,
+    }
 
     for component in PLATFORMS:
         hass.async_create_task(

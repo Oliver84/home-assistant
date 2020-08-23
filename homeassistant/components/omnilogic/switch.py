@@ -9,7 +9,7 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import CONF_PASSWORD, CONF_USERNAME
 from homeassistant.helpers import config_validation as cv, entity_platform
 
-from .const import DOMAIN
+from .const import COORDINATOR, DOMAIN, OMNI_API
 
 _LOGGER = logging.getLogger(__name__)
 SERVICE_SET_SPEED = "set_pump_speed"
@@ -25,7 +25,7 @@ async def async_setup_entry(
 
     switches = []
     _LOGGER.info("Setting up Switch platform")
-    coordinator = hass.data[DOMAIN][entry.entry_id]
+    coordinator = hass.data[DOMAIN][entry.entry_id][COORDINATOR]
     _LOGGER.debug(f"COORDINATOR: {coordinator.data}")
     for backyard in coordinator.data:
         systemId = int(backyard.get("systemId"))

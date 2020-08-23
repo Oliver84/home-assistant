@@ -7,9 +7,8 @@ from omnilogic import LightEffect, OmniLogic, OmniLogicException
 from homeassistant.components.light import ATTR_EFFECT, SUPPORT_EFFECT, LightEntity
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import CONF_PASSWORD, CONF_USERNAME
-import homeassistant.helpers.config_validation as cv
 
-from .const import DOMAIN
+from .const import COORDINATOR, DOMAIN, OMNI_API
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -24,7 +23,7 @@ async def async_setup_entry(
 
     lights = []
     _LOGGER.info("Setting up Light platform")
-    coordinator = hass.data[DOMAIN][entry.entry_id]
+    coordinator = hass.data[DOMAIN][entry.entry_id][COORDINATOR]
     # _LOGGER.debug(f"COORDINATOR: {coordinator.data}")
     for backyard in coordinator.data:
         systemId = backyard.get("systemId")
@@ -128,7 +127,7 @@ class OmnilogicLight(LightEntity):
     async def async_update(self):
         """Update Omnilogic entity."""
         await self._coordinator.async_request_refresh()
-        _LOGGER.debug(f"Updating state of lights")
+        _LOGGER.debug("Updating state of lights")
         for backyard in self._coordinator.data:
             if self._systemid == backyard.get("systemId"):
                 for bow in backyard["BOWS"]:

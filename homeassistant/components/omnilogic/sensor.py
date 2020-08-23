@@ -7,7 +7,7 @@ from homeassistant.components.sensor import ENTITY_ID_FORMAT
 from homeassistant.const import TEMP_CELSIUS, TEMP_FAHRENHEIT, UNIT_PERCENTAGE
 from homeassistant.helpers.entity import Entity
 
-from .const import DOMAIN
+from .const import COORDINATOR, DOMAIN
 
 TEMP_UNITS = [TEMP_CELSIUS, TEMP_FAHRENHEIT]
 PERCENT_UNITS = [UNIT_PERCENTAGE, UNIT_PERCENTAGE]
@@ -20,7 +20,7 @@ _LOGGER = logging.getLogger(__name__)
 async def async_setup_entry(hass, entry, async_add_entities, discovery_info=None):
     """Set up the sensor platform."""
 
-    coordinator = hass.data[DOMAIN][entry.entry_id]
+    coordinator = hass.data[DOMAIN][entry.entry_id][COORDINATOR]
     sensors = []
 
     for backyard in coordinator.data:
@@ -262,7 +262,7 @@ class OmnilogicSensor(Entity):
     async def async_update(self):
         """Update Omnilogic entity."""
         await self.coordinator.async_request_refresh()
-        _LOGGER.debug(f"Updating state of sensors.")
+        _LOGGER.debug("Updating state of sensors.")
         if self._kind == "water_temperature":
             sensordata = None
 
