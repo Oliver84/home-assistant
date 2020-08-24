@@ -295,19 +295,15 @@ class OmnilogicSwitch(SwitchEntity):
 
     async def async_set_speed(self, speed):
         """Set the switch speed."""
-        if (
-            speed >= self._minSpeed
-            and speed <= self._maxSpeed
-            and "VARIABLE" in self._switchFunction
-        ):
-            self._lastSpeed = speed
-        else:
-            raise OmniLogicException(
-                "Cannot set speed. Speed is outside pump range or unsupported pump type."
-            )
-
         _LOGGER.debug(f"FUNCTION: {self._switchFunction}")
-        if "RLY" in self._switchFunction:
+        if self._minSpeed and self._maxSpeed and "VARIABLE" in self._switchFunction:
+            if (speed >= self._minSpeed and speed <= self._maxSpeed):
+                self._lastSpeed = speed
+            else:
+                raise OmniLogicException(
+                    "Cannot set speed. Speed is outside pump range or unsupported pump type."
+                )
+        elif "RLY" in self._switchFunction:
             onValue = 1
         elif "PMP_SINGLE_SPEED" in self._switchFunction:
             onValue = 100
