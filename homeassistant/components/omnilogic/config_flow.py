@@ -7,7 +7,15 @@ import voluptuous as vol
 from homeassistant import config_entries
 from homeassistant.const import CONF_PASSWORD, CONF_USERNAME
 
+<<<<<<< HEAD
 from .const import DOMAIN, POLL_INTERVAL  # pylint:disable=unused-import
+=======
+from .const import (
+    DOMAIN,
+    POLL_INTERVAL,
+    DEFAULT_PUMP_SPEED,
+)  # pylint:disable=unused-import
+>>>>>>> 061f4c31fe4687c8bba07442a4d10c1cc81b139e
 
 _LOGGER = logging.getLogger(__name__)
 

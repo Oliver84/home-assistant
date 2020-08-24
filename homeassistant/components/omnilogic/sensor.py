@@ -262,7 +262,11 @@ class OmnilogicSensor(Entity):
     async def async_update(self):
         """Update Omnilogic entity."""
         await self.coordinator.async_request_refresh()
+<<<<<<< HEAD
         _LOGGER.debug("Updating state of sensors.")
+=======
+        _LOGGER.debug(f"Updating state of sensors.")
+>>>>>>> 061f4c31fe4687c8bba07442a4d10c1cc81b139e
         if self._kind == "water_temperature":
             sensordata = None
 

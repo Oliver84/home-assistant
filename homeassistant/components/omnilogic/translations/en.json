@@ -11,7 +11,11 @@
                 "data": {
                     "password": "Password",
                     "username": "Username",
+<<<<<<< HEAD
                     "polling_interval": "API Polling Interval in seconds."
+=======
+                    "polling_interval": "Polling Interval"
+>>>>>>> 061f4c31fe4687c8bba07442a4d10c1cc81b139e
                 },
                 "description": "Please enter the username and password for your Omnilogic account.",
                 "title": "Connect to Hayward Omnilogic"
