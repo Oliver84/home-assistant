@@ -67,19 +67,20 @@ async def async_setup_entry(hass, entry, async_add_entities, discovery_info=None
                 )
             )
 
-            sensors.append(
-                OmnilogicSensor(
-                    coordinator,
-                    "filter_pump_speed",
-                    "Pump Speed",
-                    backyard,
-                    bow,
-                    "none",
-                    "mdi:speedometer",
-                    PERCENT_UNITS,
-                    bow["Filter"],
+            if "Filter" in bow.keys():
+                sensors.append(
+                    OmnilogicSensor(
+                        coordinator,
+                        "filter_pump_speed",
+                        "Pump Speed",
+                        backyard,
+                        bow,
+                        "none",
+                        "mdi:speedometer",
+                        PERCENT_UNITS,
+                        bow["Filter"],
+                    )
                 )
-            )
 
             for pump in bow["Pumps"]:
                 sensors.append(
@@ -96,32 +97,33 @@ async def async_setup_entry(hass, entry, async_add_entities, discovery_info=None
                     )
                 )
 
-            sensors.append(
-                OmnilogicSensor(
-                    coordinator,
-                    "chlorinator",
-                    "Chlorinator",
-                    backyard,
-                    bow,
-                    "none",
-                    "mdi:gauge",
-                    PERCENT_UNITS,
-                    bow["Chlorinator"],
+            if "Chlorinator" in bow.keys():
+                sensors.append(
+                    OmnilogicSensor(
+                        coordinator,
+                        "chlorinator",
+                        "Chlorinator",
+                        backyard,
+                        bow,
+                        "none",
+                        "mdi:gauge",
+                        PERCENT_UNITS,
+                        bow["Chlorinator"],
+                    )
                 )
-            )
-            sensors.append(
-                OmnilogicSensor(
-                    coordinator,
-                    "salt_level",
-                    "Salt Level",
-                    backyard,
-                    bow,
-                    "none",
-                    "mdi:gauge",
-                    PERCENT_UNITS,
-                    bow["Chlorinator"],
+                sensors.append(
+                    OmnilogicSensor(
+                        coordinator,
+                        "salt_level",
+                        "Salt Level",
+                        backyard,
+                        bow,
+                        "none",
+                        "mdi:gauge",
+                        PERCENT_UNITS,
+                        bow["Chlorinator"],
+                    )
                 )
-            )
 
             if "CSAD" in bow.keys():
                 if bow["CSAD"]["systemId"] != "0":
