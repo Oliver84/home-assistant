@@ -240,7 +240,7 @@ class OmnilogicHeater(WaterHeaterEntity):
         _LOGGER.debug(
             f"{self._mspsystemid} {self._poolid} {self._equipmentid} {target_temperature}"
         )
-        await api_client.connect()
+
         success = await api_client.set_heater_temperature(
             int(self._mspsystemid),
             int(self._poolid),
@@ -248,7 +248,7 @@ class OmnilogicHeater(WaterHeaterEntity):
             int(target_temperature),
         )
 
-        api_client.close()
+        await api_client.close()
 
         _LOGGER.info(f"Temperature response: {success}")
         if success:
@@ -270,7 +270,7 @@ class OmnilogicHeater(WaterHeaterEntity):
             heaterEnable,
         )
 
-        api_client.close()
+        await api_client.close()
 
         if success:
             self.async_schedule_update_ha_state()
