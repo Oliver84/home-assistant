@@ -17,7 +17,7 @@ from .const import COORDINATOR, DOMAIN, OMNI_API, POLL_INTERVAL
 _LOGGER = logging.getLogger(__name__)
 CONFIG_SCHEMA = vol.Schema({DOMAIN: vol.Schema({})}, extra=vol.ALLOW_EXTRA)
 
-PLATFORMS = ["sensor", "light", "switch"]
+PLATFORMS = ["sensor", "light", "switch", "water_heater"]
 
 
 async def async_setup(hass: HomeAssistant, config: dict):
