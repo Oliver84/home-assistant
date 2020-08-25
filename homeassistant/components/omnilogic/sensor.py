@@ -361,7 +361,10 @@ class OmnilogicSensor(Entity):
             self.attrs["Alarm"] = ""
             if len(self.alarms) != 0:
                 self.attrs["Alarm"] = (
-                    self.alarms[0]["Message"] + " (" + self.alarms[0]["Comment"] + ")"
+                    self.alarms[0].get("Message")
+                    + " ("
+                    + self.alarms[0].get("Comment")
+                    + ")"
                 )
 
         elif self._kind == "salt_level":
