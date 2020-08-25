@@ -9,7 +9,7 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import CONF_PASSWORD, CONF_USERNAME
 from homeassistant.helpers import config_validation as cv, entity_platform
 
-from .const import DOMAIN, DEFAULT_PUMP_SPEED
+from .const import COORDINATOR, DOMAIN, OMNI_API
 
 _LOGGER = logging.getLogger(__name__)
 SERVICE_SET_SPEED = "set_pump_speed"
@@ -25,7 +25,7 @@ async def async_setup_entry(
 
     switches = []
     _LOGGER.info("Setting up Switch platform")
-    coordinator = hass.data[DOMAIN][entry.entry_id]
+    coordinator = hass.data[DOMAIN][entry.entry_id][COORDINATOR]
     _LOGGER.debug(f"COORDINATOR: {coordinator.data}")
     for backyard in coordinator.data:
         systemId = int(backyard.get("systemId"))
@@ -267,18 +267,18 @@ class OmnilogicSwitch(SwitchEntity):
         else:
             onValue = 100
 
-        await self.async_set_speed(onValue)
+        # await self.async_set_speed(onValue)
 
         _LOGGER.debug(f"{self._systemid} {self._poolid} {self._switchId} {onValue}")
-        # try:
-        #     omni = OmniLogic(self._username, self._password)
-        #     await omni.connect()
-        #     await omni.set_relay_valve(
-        #         self._systemid, self._poolid, self._switchId, onValue
-        #     )
-        #     self._state = 1
-        # except OmniLogicException as error:
-        #     _LOGGER.error("Setting status to %s: %r", self.name, error)
+        try:
+            omni = OmniLogic(self._username, self._password)
+            # await omni.connect()
+            await omni.set_relay_valve(
+                self._systemid, self._poolid, self._switchId, onValue
+            )
+            self._state = 1
+        except OmniLogicException as error:
+            _LOGGER.error("Setting status to %s: %r", self.name, error)
 
     async def async_turn_off(self):
         """Set the switch status."""
@@ -287,7 +287,7 @@ class OmnilogicSwitch(SwitchEntity):
             self._lastSpeed = self._switchSpeed
         try:
             omni = OmniLogic(self._username, self._password)
-            await omni.connect()
+            # await omni.connect()
             await omni.set_relay_valve(self._systemid, self._poolid, self._switchId, 0)
             self._state = 0
         except OmniLogicException as error:
@@ -296,21 +296,21 @@ class OmnilogicSwitch(SwitchEntity):
     async def async_set_speed(self, speed):
         """Set the switch speed."""
         _LOGGER.debug(f"FUNCTION: {self._switchFunction}")
-        if self._minSpeed and self._maxSpeed and "VARIABLE" in self._switchFunction:
-            if (speed >= self._minSpeed and speed <= self._maxSpeed):
-                self._lastSpeed = speed
+        if "VARIABLE" in self._switchFunction:
+            if speed >= self._minSpeed and speed <= self._maxSpeed:
+                onValue = speed
             else:
-                raise OmniLogicException(
-                    "Cannot set speed. Speed is outside pump range or unsupported pump type."
-                )
-        elif "RLY" in self._switchFunction:
-            onValue = 1
-        elif "PMP_SINGLE_SPEED" in self._switchFunction:
-            onValue = 100
-        elif self._lastSpeed:
-            onValue = self._lastSpeed
+                raise OmniLogicException("Cannot set speed. Speed is outside pump.")
         else:
-            onValue = 85
+            raise OmniLogicException("Cannot set speed on non-VSP pump.")
+        # elif "RLY" in self._switchFunction:
+        #     onValue = 1
+        # elif "PMP_SINGLE_SPEED" in self._switchFunction:
+        #     onValue = 100
+        # elif self._lastSpeed:
+        #     onValue = self._lastSpeed
+        # else:
+        #     onValue = 85
 
         _LOGGER.debug(f"{self._systemid} {self._poolid} {self._switchId} {onValue}")
         try:

@@ -1,7 +1,7 @@
 {
     "config": {
         "abort": {
-            "exists": "Omnilogic is already configured."
+            "already_setup": "Omnilogic is already configured."
         },
         "error": {
             "conn_err": "Unable to connect to Hayward Omnilogic, confirm username and password."
@@ -11,7 +11,7 @@
                 "data": {
                     "password": "Password",
                     "username": "Username",
-                    "polling_interval": "Polling Interval"
+                    "polling_interval": "API Polling Interval in seconds."
                 },
                 "description": "Please enter the username and password for your Omnilogic account.",
                 "title": "Connect to Hayward Omnilogic"
