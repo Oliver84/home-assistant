@@ -34,6 +34,7 @@ async def async_setup_entry(hass, entry, async_add_entities, discovery_info=None
     password = conf[CONF_PASSWORD]
 
     coordinator = hass.data[DOMAIN][entry.entry_id]
+    is_metric = hass.config.units.is_metric
     heaters = []
 
     for backyard in coordinator.data:
@@ -47,6 +48,7 @@ async def async_setup_entry(hass, entry, async_add_entities, discovery_info=None
                         bow["Heater"]["Operation"]["VirtualHeater"],
                         username,
                         password,
+                        is_metric,
                     )
                 )
 
@@ -56,7 +58,9 @@ async def async_setup_entry(hass, entry, async_add_entities, discovery_info=None
 class OmnilogicHeater(WaterHeaterEntity):
     """Defines and Omnilogic Heater Entity."""
 
-    def __init__(self, coordinator, backyard, bow, virtualheater, username, password):
+    def __init__(
+        self, coordinator, backyard, bow, virtualheater, username, password, is_metric
+    ):
         """Initialize the Heater."""
 
         sensorname = (
@@ -83,6 +87,10 @@ class OmnilogicHeater(WaterHeaterEntity):
         self._current_temperature = None
         self._max_temp = float(virtualheater["Max-Settable-Water-Temp"])
         self._min_temp = float(virtualheater["Min-Settable-Water-Temp"])
+        self._mspsystemid = backyard["systemId"]
+        self._poolid = bow["systemId"]
+        self._equipmentid = virtualheater["systemId"]
+        self._is_metric = is_metric
         self.attrs = {}
         self.attrs["MspSystemId"] = backyard["systemId"]
         self.attrs["PoolId"] = bow["systemId"]
@@ -189,7 +197,7 @@ class OmnilogicHeater(WaterHeaterEntity):
             for bow in backyard.get("BOWS"):
                 if (
                     bow["Heater"]["Operation"]["VirtualHeater"]["systemId"]
-                    == self.attrs["SystemId"]
+                    == self._equipmentid
                 ):
                     heater = bow["Heater"]
                     virtualheater = bow["VirtualHeater"]
@@ -221,26 +229,32 @@ class OmnilogicHeater(WaterHeaterEntity):
             heater["Operation"]["VirtualHeater"]["Current-Set-Point"]
         )
 
-    async def set_temperature(self, **kwargs):
+    async def async_set_temperature(self, **kwargs):
         """Set the water heater temperature set-point."""
         target_temperature = kwargs.get(ATTR_TEMPERATURE)
-        _LOGGER.info("Setting temperature to " + target_temperature)
+
+        _LOGGER.info(f"Setting temperature to { target_temperature}")
 
         api_client = OmniLogic(self.username, self.password)
 
+        _LOGGER.debug(
+            f"{self._mspsystemid} {self._poolid} {self._equipmentid} {target_temperature}"
+        )
         await api_client.connect()
         success = await api_client.set_heater_temperature(
-            int(self.attrs.get("MspSystemId")),
-            int(self.bow.get("systemId")),
-            int(self.attrs.get("SystemId")),
+            int(self._mspsystemid),
+            int(self._poolid),
+            int(self._equipmentid),
             int(target_temperature),
         )
-        _LOGGER.info("Temperature response: " + success)
-        if success:
-            self._target_temperature = target_temperature
-        #    self.async_schedule_update_ha_state()
 
-    async def set_operation_mode(self, operation_mode):
+        api_client.close()
+
+        _LOGGER.info(f"Temperature response: {success}")
+        if success:
+            self.async_schedule_update_ha_state()
+
+    async def async_set_operation_mode(self, operation_mode):
         """Turn the heater on or off."""
         _LOGGER.info("Setting operation mode.")
         heaterEnable = True
@@ -250,12 +264,13 @@ class OmnilogicHeater(WaterHeaterEntity):
         api_client = OmniLogic(self.username, self.password)
 
         success = await api_client.set_heater_onoff(
-            int(self.attrs.get("MspSystemId")),
-            int(self.bow.get("systemId")),
-            int(self.attrs.get("SystemId")),
+            int(self._mspsystemid),
+            int(self._poolid),
+            int(self._equipmentid),
             heaterEnable,
         )
 
+        api_client.close()
+
         if success:
-            self._current_operation = operation_mode
-        #    self.async_schedule_update_ha_state()
+            self.async_schedule_update_ha_state()
