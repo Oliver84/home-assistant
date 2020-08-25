@@ -520,12 +520,7 @@ class OmnilogicSensor(Entity):
                 if backyard.get("systemId") == self.attrs["MspSystemId"]:
                     sensordata = backyard
 
-            all_alarms = sensordata["Alarms"]
-
-            alarms_list = []
-            for alarm_segment in all_alarms:
-                for this_alarm in alarm_segment:
-                    alarms_list.append(this_alarm)
+            alarms_list = sensordata["Alarms"]
 
             if len(alarms_list) > 0:
                 self._state = "on"
