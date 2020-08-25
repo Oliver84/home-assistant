@@ -359,12 +359,11 @@ class OmnilogicSensor(Entity):
 
             self.attrs["Alarm"] = ""
             if len(self.alarms) != 0:
-                self.attrs["Alarm"] = (
-                    self.alarms[0].get("Message")
-                    + " ("
-                    + self.alarms[0].get("Comment")
-                    + ")"
-                )
+                alarm_message = self.alarms[0].get("Message")
+                if self.alarms[0].get("Comment") is not None:
+                    alarm_message = alarm_message + (
+                        " (" + self.alarms[0].get("Comment") + ")"
+                    )
 
         elif self._kind == "salt_level":
             sensordata = {}
@@ -524,12 +523,12 @@ class OmnilogicSensor(Entity):
 
             if len(alarms_list) > 0:
                 self._state = "on"
-                self.attrs["Alarm"] = (
-                    alarms_list[0].get("Message")
-                    + " ("
-                    + alarms_list[0].get("Comment")
-                    + ")"
-                )
+                alarm_message = alarms_list[0].get("Message")
+                if alarms_list[0].get("Comment") is not None:
+                    alarm_message = alarm_message + (
+                        " (" + alarms_list[0].get("Comment") + ")"
+                    )
+                self.attrs["Alarm"] = alarm_message
             else:
                 self._state = "off"
 
