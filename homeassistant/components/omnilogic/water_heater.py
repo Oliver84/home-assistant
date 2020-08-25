@@ -20,7 +20,7 @@ from homeassistant.const import (
     TEMP_FAHRENHEIT,
 )
 
-from .const import DOMAIN
+from .const import COORDINATOR, DOMAIN
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -33,7 +33,7 @@ async def async_setup_entry(hass, entry, async_add_entities, discovery_info=None
     username = conf[CONF_USERNAME]
     password = conf[CONF_PASSWORD]
 
-    coordinator = hass.data[DOMAIN][entry.entry_id]
+    coordinator = hass.data[DOMAIN][entry.entry_id][COORDINATOR]
     is_metric = hass.config.units.is_metric
     heaters = []
 
