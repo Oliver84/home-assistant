@@ -355,8 +355,7 @@ class OmnilogicSensor(Entity):
             self.attrs["MspSystemId"] = self._backyard["systemId"]
             self.attrs["PumpType"] = self.sensordata.get("Type")
 
-            self.alarms = []
-            self.alarms.append(sensordata.get("Alarms"))
+            self.alarms = sensordata.get("Alarms")
 
             self.attrs["Alarm"] = ""
             if len(self.alarms) != 0:
