@@ -157,6 +157,11 @@ class OmnilogicSwitch(SwitchEntity):
         return self._backyardName + " " + self._name + " " + self._switchName
 
     @property
+    def should_poll(self) -> bool:
+        """Return the polling requirement of the entity."""
+        return False
+
+    @property
     def unique_id(self) -> str:
         """Return a unique, Home Assistant friendly identifier for this entity."""
 
@@ -183,13 +188,7 @@ class OmnilogicSwitch(SwitchEntity):
     @property
     def is_on(self):
         """Return true if switch is on."""
-        if self._switchState == 7:
-            return 0
-        return self._switchState
 
-    async def async_update(self):
-        """Update Omnilogic entity."""
-        await self._coordinator.async_request_refresh()
         _LOGGER.debug("Updating state of switches.")
         for backyard in self._coordinator.data:
             if self._systemid == int(backyard.get("systemId")):
@@ -240,6 +239,14 @@ class OmnilogicSwitch(SwitchEntity):
                             f"Speed: {self._switchSpeed} State: {self._switchState} Function: {self._switchFunction}"
                         )
 
+        if self._switchState == 7:
+            return 0
+        return self._switchState
+
+    async def async_update(self):
+        """Update Omnilogic entity."""
+        await self._coordinator.async_request_refresh()
+
     async def async_turn_on(self, **kwargs):
         """Set the switch status."""
         _LOGGER.debug(f"FUNCTION: {self._switchFunction}")
@@ -260,6 +267,7 @@ class OmnilogicSwitch(SwitchEntity):
                 self._systemid, self._poolid, self._switchId, onValue
             )
             self._state = 1
+            await self._coordinator.async_request_refresh()
         except OmniLogicException as error:
             _LOGGER.error("Setting status to %s: %r", self.name, error)
 
@@ -273,6 +281,7 @@ class OmnilogicSwitch(SwitchEntity):
             # await omni.connect()
             await omni.set_relay_valve(self._systemid, self._poolid, self._switchId, 0)
             self._state = 0
+            await self._coordinator.async_request_refresh()
         except OmniLogicException as error:
             _LOGGER.error("Setting status to %s: %r", self.name, error)
 
@@ -305,3 +314,9 @@ class OmnilogicSwitch(SwitchEntity):
             self._state = 1
         except OmniLogicException as error:
             _LOGGER.error("Setting status to %s: %r", self.name, error)
+
+    async def async_added_to_hass(self):
+        """Connect to dispatcher listening for entity data notifications."""
+        self.async_on_remove(
+            self._coordinator.async_add_listener(self.async_write_ha_state)
+        )

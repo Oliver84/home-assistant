@@ -207,7 +207,7 @@ class OmnilogicSensor(Entity):
     @property
     def should_poll(self) -> bool:
         """Return the polling requirement of the entity."""
-        return True
+        return False
 
     @property
     def unique_id(self) -> str:
@@ -248,22 +248,7 @@ class OmnilogicSensor(Entity):
     @property
     def state(self):
         """Return the state."""
-        return self._state
 
-    @property
-    def device_info(self):
-        """Define the device as back yard/MSP System."""
-
-        return {
-            "identifiers": {(DOMAIN, self.attrs["MspSystemId"])},
-            "name": self._backyard.get("BackyardName"),
-            "manufacturer": "Hayward",
-            "model": "OmniLogic",
-        }
-
-    async def async_update(self):
-        """Update Omnilogic entity."""
-        await self.coordinator.async_request_refresh()
         _LOGGER.debug("Updating state of sensors.")
         if self._kind == "water_temperature":
             sensordata = None
@@ -533,6 +518,22 @@ class OmnilogicSensor(Entity):
                 self.attrs["Alarm"] = alarm_message
             else:
                 self._state = "off"
+        return self._state
+
+    @property
+    def device_info(self):
+        """Define the device as back yard/MSP System."""
+
+        return {
+            "identifiers": {(DOMAIN, self.attrs["MspSystemId"])},
+            "name": self._backyard.get("BackyardName"),
+            "manufacturer": "Hayward",
+            "model": "OmniLogic",
+        }
+
+    async def async_update(self):
+        """Update Omnilogic entity."""
+        await self.coordinator.async_request_refresh()
 
     async def async_added_to_hass(self):
         """Subscribe to updates."""

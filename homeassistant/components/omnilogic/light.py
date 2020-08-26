@@ -79,6 +79,11 @@ class OmnilogicLight(LightEntity):
         return self._backyardName + " " + self._name + " " + self._lightname
 
     @property
+    def should_poll(self) -> bool:
+        """Return the polling requirement of the entity."""
+        return False
+
+    @property
     def unique_id(self) -> str:
         """Return a unique, Home Assistant friendly identifier for this entity."""
 
@@ -106,7 +111,21 @@ class OmnilogicLight(LightEntity):
     @property
     def is_on(self):
         """Return true if light is on."""
-        return self._state
+
+        _LOGGER.debug("Updating state of lights")
+        for backyard in self._coordinator.data:
+            if self._systemid == backyard.get("systemId"):
+                for bow in backyard["BOWS"]:
+                    if len(bow.get("Lights")) > 0:
+                        for light in bow.get("Lights"):
+                            if self._lightId == int(light.get("systemId")):
+                                self._state = int(
+                                    bow.get("Lights")[0].get("lightState")
+                                )
+                                self._effect = int(
+                                    bow.get("Lights")[0].get("currentShow")
+                                )
+                                return self._state
 
     @property
     def effect(self):
@@ -127,26 +146,13 @@ class OmnilogicLight(LightEntity):
     async def async_update(self):
         """Update Omnilogic entity."""
         await self._coordinator.async_request_refresh()
-        _LOGGER.debug("Updating state of lights")
-        for backyard in self._coordinator.data:
-            if self._systemid == backyard.get("systemId"):
-                for bow in backyard["BOWS"]:
-                    if len(bow.get("Lights")) > 0:
-                        for light in bow.get("Lights"):
-                            if self._lightId == int(light.get("systemId")):
-                                self._state = int(
-                                    bow.get("Lights")[0].get("lightState")
-                                )
-                                self._effect = int(
-                                    bow.get("Lights")[0].get("currentShow")
-                                )
 
     async def async_set_effect(self, effect):
         """Set the light show effect."""
 
         try:
             omni = OmniLogic(self._username, self._password)
-            await omni.connect()
+            # await omni.connect()
             await omni.set_lightshow(
                 self._systemid, self._poolid, self._lightId, effect
             )
@@ -168,7 +174,7 @@ class OmnilogicLight(LightEntity):
 
         try:
             omni = OmniLogic(self._username, self._password)
-            await omni.connect()
+            # await omni.connect()
             await omni.set_relay_valve(self._systemid, self._poolid, self._lightId, 1)
             self._state = 1
             self._effect = effect
@@ -182,10 +188,16 @@ class OmnilogicLight(LightEntity):
 
         try:
             omni = OmniLogic(self._username, self._password)
-            await omni.connect()
+            # await omni.connect()
             await omni.set_relay_valve(self._systemid, self._poolid, self._lightId, 0)
             self._state = 0
             await omni.close()
             await self._coordinator.async_request_refresh()
         except OmniLogicException as error:
             _LOGGER.error(f"Error turning off light: {error}")
+
+    async def async_added_to_hass(self):
+        """Connect to dispatcher listening for entity data notifications."""
+        self.async_on_remove(
+            self._coordinator.async_add_listener(self.async_write_ha_state)
+        )
