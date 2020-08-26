@@ -128,7 +128,10 @@ class OmnilogicSwitch(SwitchEntity):
         """Initialize an OmniLogic Switch."""
         self._coordinator = coordinator
         self._systemid = systemId
-        self._poolid = poolId
+        if poolId is not None:
+            self._poolid = poolId
+        else:
+            self._poolid = 0
         self._switch = switch
         self._backyard = backyard
         self._backyardName = backyard["BackyardName"]
@@ -145,6 +148,7 @@ class OmnilogicSwitch(SwitchEntity):
         self._switchState = None
         self._maxSpeed = None
         self._minSpeed = None
+        self._switchFunction = None
 
     @property
     def name(self):
@@ -183,14 +187,6 @@ class OmnilogicSwitch(SwitchEntity):
             return 0
         return self._switchState
 
-    def turn_on(self, **kwargs):
-        """Instruct the switch to turn on."""
-        self.async_turn_on()
-
-    def turn_off(self, **kwargs):
-        """Instruct the switch to turn off."""
-        self.async_turn_off()
-
     async def async_update(self):
         """Update Omnilogic entity."""
         await self._coordinator.async_request_refresh()
@@ -199,29 +195,18 @@ class OmnilogicSwitch(SwitchEntity):
             if self._systemid == int(backyard.get("systemId")):
                 if len(backyard.get("Relays")) > 0:
                     for switch in backyard.get("Relays"):
-                        if switch.get("systemId") == self._switchId:
+                        if int(switch.get("systemId")) == self._switchId:
                             self._switchSpeed = None
                             self._switchState = int(switch.get("relayState"))
                             self._switchFunction = switch.get("Type")
                             _LOGGER.debug(
-                                f"Speed: {self._switchSpeed} State: {self._switchState} Function: {self._switchFunction}"
+                                f"Backyard Speed: {self._switchSpeed} State: {self._switchState} Function: {self._switchFunction}"
                             )
-
-                # if len(backyard.get("Pumps")) > 0:
-                #     for switch in backyard.get("Pumps"):
-                #         if switch.get("systemId") == self._switchId:
-                #             self._switchSpeed = None
-                #             # self._switchId = int(switch.get("systemId"))
-                #             self._switchState = int(switch.get("relayState"))
-                #             self._switchFunction = switch.get("Function")
-                #             # self._switchName = switch.get("Name")
 
                 for bow in backyard["BOWS"]:
                     # poolId = bow.get("systemId")
                     if len(bow.get("Relays")) > 0:
                         for switch in bow.get("Relays"):
-                            id = int(switch.get("systemId"))
-                            _LOGGER.debug(f"##### Relay: {switch} {id}")
                             if int(switch.get("systemId")) == self._switchId:
                                 self._switchSpeed = None
                                 self._switchState = int(switch.get("relayState"))
@@ -266,8 +251,6 @@ class OmnilogicSwitch(SwitchEntity):
             onValue = self._lastSpeed
         else:
             onValue = 100
-
-        # await self.async_set_speed(onValue)
 
         _LOGGER.debug(f"{self._systemid} {self._poolid} {self._switchId} {onValue}")
         try:
