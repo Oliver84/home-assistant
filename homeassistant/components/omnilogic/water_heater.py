@@ -205,10 +205,15 @@ class OmnilogicHeater(WaterHeaterEntity):
                     this_backyard = backyard
 
         temp_return = float(this_bow.get("waterTemp"))
+        temp_check = temp_return
+
         unit_of_measurement = TEMP_FAHRENHEIT
         if this_backyard["Unit-of-Measurement"] == "Metric":
             temp_return = round((temp_return - 32) * 5 / 9, 1)
             unit_of_measurement = TEMP_CELSIUS
+
+        if temp_check == -1:
+            temp_return = None
 
         self.attrs["hayward_temperature"] = temp_return
         self.attrs["hayward_unit_of_measure"] = unit_of_measurement
@@ -223,7 +228,7 @@ class OmnilogicHeater(WaterHeaterEntity):
         if heater.get("heaterState") == "0":
             self._state = STATE_OFF
 
-        self._current_temperature = float(this_bow.get("waterTemp"))
+        self._current_temperature = temp_return
 
         self._target_temperature = float(
             heater["Operation"]["VirtualHeater"]["Current-Set-Point"]
