@@ -112,18 +112,21 @@ class OmnilogicLight(LightEntity):
     def is_on(self):
         """Return true if light is on."""
 
-        _LOGGER.debug("Updating state of lights")
+        # _LOGGER.debug("Updating state of lights")
         for backyard in self._coordinator.data:
             if self._systemid == backyard.get("systemId"):
                 for bow in backyard["BOWS"]:
                     if len(bow.get("Lights")) > 0:
                         for light in bow.get("Lights"):
                             if self._lightId == int(light.get("systemId")):
+                                _LOGGER.debug(f"Updating state of light: {self.name}")
                                 self._state = int(
-                                    bow.get("Lights")[0].get("lightState")
+                                    # bow.get("Lights")[0].get("lightState")
+                                    light.get("lightState")
                                 )
                                 self._effect = int(
-                                    bow.get("Lights")[0].get("currentShow")
+                                    # bow.get("Lights")[0].get("currentShow")
+                                    light.get("currentShow")
                                 )
                                 return self._state
 
@@ -165,7 +168,7 @@ class OmnilogicLight(LightEntity):
         """Set the switch status."""
 
         effect = kwargs.get(ATTR_EFFECT)
-        _LOGGER.debug(f"Effect Name: {effect}")
+        _LOGGER.debug(f"Turning on light: {self.name} Effect Name: {effect}")
         if effect:
             effect = LightEffect[effect].value
             if effect != self._effect:
@@ -185,7 +188,7 @@ class OmnilogicLight(LightEntity):
 
     async def async_turn_off(self):
         """Set the switch status."""
-
+        _LOGGER.debug(f"Turning off light: {self.name}")
         try:
             omni = OmniLogic(self._username, self._password)
             # await omni.connect()

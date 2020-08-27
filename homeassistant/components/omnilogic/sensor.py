@@ -249,7 +249,7 @@ class OmnilogicSensor(Entity):
     def state(self):
         """Return the state."""
 
-        _LOGGER.debug("Updating state of sensors.")
+        _LOGGER.debug(f"Updating state of sensor: {self._name}")
         if self._kind == "water_temperature":
             sensordata = None
 
