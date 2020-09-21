@@ -4,13 +4,13 @@ from datetime import timedelta
 import logging
 
 from homeassistant.components.sensor import ENTITY_ID_FORMAT
-from homeassistant.const import TEMP_CELSIUS, TEMP_FAHRENHEIT, UNIT_PERCENTAGE
+from homeassistant.const import TEMP_CELSIUS, TEMP_FAHRENHEIT, PERCENTAGE
 from homeassistant.helpers.entity import Entity
 
 from .const import COORDINATOR, DOMAIN
 
 TEMP_UNITS = [TEMP_CELSIUS, TEMP_FAHRENHEIT]
-PERCENT_UNITS = [UNIT_PERCENTAGE, UNIT_PERCENTAGE]
+PERCENT_UNITS = [PERCENTAGE, PERCENTAGE]
 SALT_UNITS = ["g/L", "ppm"]
 
 SCAN_INTERVAL = timedelta(seconds=30)
