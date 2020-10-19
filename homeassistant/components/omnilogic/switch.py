@@ -1,5 +1,4 @@
 """Platform for switch integration."""
-import logging
 import time
 
 from omnilogic import OmniLogicException
@@ -11,7 +10,6 @@ from homeassistant.helpers import config_validation as cv, entity_platform
 from .common import OmniLogicEntity, OmniLogicUpdateCoordinator
 from .const import COORDINATOR, DOMAIN, PUMP_TYPES
 
-_LOGGER = logging.getLogger(__name__)
 SERVICE_SET_SPEED = "set_pump_speed"
 
 
@@ -101,6 +99,7 @@ class OmniLogicSwitch(OmniLogicEntity, SwitchEntity):
 
         return state
 
+
 class OmniLogicRelayControl(OmniLogicSwitch):
     """Define the OmniLogic Relay entity."""
 
@@ -117,7 +116,7 @@ class OmniLogicRelayControl(OmniLogicSwitch):
             time.sleep(10)
             self.async_schedule_update_ha_state()
 
-    async def async_turn_off(self):
+    async def async_turn_off(self, **kwargs):
         """Turn off the relay."""
         success = await self.coordinator.api.set_relay_valve(
             int(self._item_id[1]),
@@ -204,7 +203,7 @@ class OmniLogicPumpControl(OmniLogicSwitch):
         """Set the switch speed."""
 
         if self._pump_type != "SINGLE":
-            if speed >= self._min_speed and speed <= self._max_speed:
+            if self._min_speed <= speed <= self._max_speed:
                 success = await self.coordinator.api.set_relay_valve(
                     int(self._item_id[1]),
                     int(self._item_id[3]),
