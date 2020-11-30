@@ -1,5 +1,5 @@
 """Platform for switch integration."""
-import time
+import asyncio
 
 from omnilogic import OmniLogicException
 import voluptuous as vol
@@ -113,7 +113,7 @@ class OmniLogicRelayControl(OmniLogicSwitch):
         )
 
         if success:
-            time.sleep(10)
+            await asyncio.sleep(10)
             self.async_schedule_update_ha_state()
 
     async def async_turn_off(self, **kwargs):
@@ -126,7 +126,7 @@ class OmniLogicRelayControl(OmniLogicSwitch):
         )
 
         if success:
-            time.sleep(10)
+            await asyncio.sleep(10)
             self.async_schedule_update_ha_state()
 
 
@@ -177,7 +177,7 @@ class OmniLogicPumpControl(OmniLogicSwitch):
         )
 
         if success:
-            time.sleep(10)
+            await asyncio.sleep(10)
             self.async_schedule_update_ha_state()
 
     async def async_turn_off(self, **kwargs):
@@ -196,7 +196,7 @@ class OmniLogicPumpControl(OmniLogicSwitch):
         )
 
         if success:
-            time.sleep(10)
+            await asyncio.sleep(10)
             self.async_schedule_update_ha_state()
 
     async def async_set_speed(self, speed):

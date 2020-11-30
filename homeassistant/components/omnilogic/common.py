@@ -20,8 +20,6 @@ from .const import (
     ATTR_MANUFACTURER,
     ATTR_MODEL,
     DOMAIN,
-    CONF_SCAN_INTERVAL,
-    DEFAULT_SCAN_INTERVAL,
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -71,7 +69,7 @@ class OmniLogicUpdateCoordinator(DataUpdateCoordinator):
                 data[current_id] = item
 
             for kind in ALL_ITEM_KINDS:
-                if kind in item:    
+                if kind in item:
                     data = get_item_data(item[kind], kind, current_id, data)
 
             return data

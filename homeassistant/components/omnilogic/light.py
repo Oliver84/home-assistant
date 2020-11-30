@@ -1,5 +1,5 @@
 """Platform for light integration."""
-import time
+import asyncio
 
 from omnilogic import LightEffect, OmniLogicException
 import voluptuous as vol
@@ -158,7 +158,7 @@ class OmniLogicLightControl(OmniLogicEntity, LightEntity):
         )
 
         if success:
-            time.sleep(30)
+            await asyncio.sleep(30)
             self.async_schedule_update_ha_state(True)
 
     async def async_turn_off(self, **kwargs):
@@ -171,7 +171,7 @@ class OmniLogicLightControl(OmniLogicEntity, LightEntity):
         )
 
         if success:
-            time.sleep(60)
+            await asyncio.sleep(60)
             self.async_schedule_update_ha_state(True)
 
     async def async_set_v2effect(self, **kwargs):
@@ -191,7 +191,7 @@ class OmniLogicLightControl(OmniLogicEntity, LightEntity):
                 )
 
                 if success:
-                    time.sleep(30)
+                    await asyncio.sleep(30)
                     self.async_schedule_update_ha_state(True)
             else:
                 raise OmniLogicException("Speed must be 0-8 and brightness 0-4.")

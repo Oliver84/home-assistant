@@ -1,4 +1,5 @@
 """Support for the Omnilogic integration pool heaters."""
+import asyncio
 
 from homeassistant.components.water_heater import (
     STATE_OFF,
@@ -191,6 +192,7 @@ class OmniLogicHeaterControl(OmniLogicEntity, WaterHeaterEntity):
         )
 
         if success:
+            await asyncio.sleep(30)
             self.async_schedule_update_ha_state()
 
 

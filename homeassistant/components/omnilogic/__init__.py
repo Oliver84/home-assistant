@@ -11,7 +11,13 @@ from homeassistant.exceptions import ConfigEntryNotReady
 from homeassistant.helpers import aiohttp_client
 
 from .common import OmniLogicUpdateCoordinator
-from .const import CONF_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL, COORDINATOR, DOMAIN, OMNI_API
+from .const import (
+    CONF_SCAN_INTERVAL,
+    COORDINATOR,
+    DEFAULT_SCAN_INTERVAL,
+    DOMAIN,
+    OMNI_API,
+)
 
 _LOGGER = logging.getLogger(__name__)
 
