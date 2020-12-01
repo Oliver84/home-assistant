@@ -1,5 +1,5 @@
 """Platform for light integration."""
-import asyncio
+import time
 
 from omnilogic import LightEffect, OmniLogicException
 import voluptuous as vol
@@ -101,23 +101,35 @@ class OmniLogicLightControl(OmniLogicEntity, LightEntity):
         else:
             self._version = 1
 
+        self._last_action = 0
+        self._state = None
+        self._state_delay = 60
+        self._effect = None
+
     @property
     def is_on(self):
         """Return if the light is on."""
+        if self._last_action < (time.time() - self._state_delay):
+            if self._version == 2:
+                self._attrs["brightness"] = self.coordinator.data[self._item_id][
+                    "brightness"
+                ]
+                self._attrs["speed"] = self.coordinator.data[self._item_id]["speed"]
 
-        if self._version == 2:
-            self._attrs["brightness"] = self.coordinator.data[self._item_id][
-                "brightness"
-            ]
-            self._attrs["speed"] = self.coordinator.data[self._item_id]["speed"]
+            self._state = int(self.coordinator.data[self._item_id][self._state_key])
 
-        return int(self.coordinator.data[self._item_id][self._state_key])
+        return self._state
 
     @property
     def effect(self):
         """Return the current light effect."""
-        effect = LightEffect(self.coordinator.data[self._item_id]["currentShow"])
-        return effect.name
+
+        if self._last_action < (time.time() - self._state_delay):
+            self._effect = LightEffect(
+                self.coordinator.data[self._item_id]["currentShow"]
+            ).name
+
+        return self._effect
 
     @property
     def effect_list(self):
@@ -135,44 +147,45 @@ class OmniLogicLightControl(OmniLogicEntity, LightEntity):
 
     async def async_set_effect(self, effect):
         """Set the light show effect."""
-        success = await self.coordinator.api.set_lightshow(
+        self._last_action = time.time()
+        self._effect = LightEffect[effect].value
+        self.async_schedule_update_ha_state()
+
+        await self.coordinator.api.set_lightshow(
             int(self._item_id[1]),
             int(self._item_id[3]),
             int(self._item_id[-1]),
             int(LightEffect[effect].value),
         )
 
-        if success:
-            self.async_schedule_update_ha_state()
-
     async def async_turn_on(self, **kwargs):
         """Turn on the light."""
+        self._last_action = time.time()
+        self._state = True
+        self.async_schedule_update_ha_state()
+
         if kwargs.get(ATTR_EFFECT):
             await self.async_set_effect(kwargs[ATTR_EFFECT])
 
-        success = await self.coordinator.api.set_relay_valve(
+        await self.coordinator.api.set_relay_valve(
             int(self._item_id[1]),
             int(self._item_id[3]),
             int(self._item_id[-1]),
             1,
         )
 
-        if success:
-            await asyncio.sleep(30)
-            self.async_schedule_update_ha_state(True)
-
     async def async_turn_off(self, **kwargs):
         """Turn off the light."""
-        success = await self.coordinator.api.set_relay_valve(
+        self._last_action = time.time()
+        self._state = False
+        self.async_schedule_update_ha_state()
+
+        await self.coordinator.api.set_relay_valve(
             int(self._item_id[1]),
             int(self._item_id[3]),
             int(self._item_id[-1]),
             0,
         )
-
-        if success:
-            await asyncio.sleep(60)
-            self.async_schedule_update_ha_state(True)
 
     async def async_set_v2effect(self, **kwargs):
         """Set the light effect speed or brightness for V2 lights."""
@@ -181,7 +194,7 @@ class OmniLogicLightControl(OmniLogicEntity, LightEntity):
             speed = kwargs.get("speed", self._speed)
             brightness = kwargs.get("brightness", self._brightness)
             if 0 <= speed <= 8 and 0 <= brightness <= 4:
-                success = await self.coordinator.api.set_lightshowv2(
+                await self.coordinator.api.set_lightshowv2(
                     int(self._item_id[1]),
                     int(self._item_id[3]),
                     int(self._item_id[-1]),
@@ -190,9 +203,6 @@ class OmniLogicLightControl(OmniLogicEntity, LightEntity):
                     brightness,
                 )
 
-                if success:
-                    await asyncio.sleep(30)
-                    self.async_schedule_update_ha_state(True)
             else:
                 raise OmniLogicException("Speed must be 0-8 and brightness 0-4.")
         else:

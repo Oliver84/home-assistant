@@ -1,5 +1,5 @@
 """Support for the Omnilogic integration pool heaters."""
-import asyncio
+import time
 
 from homeassistant.components.water_heater import (
     STATE_OFF,
@@ -87,6 +87,10 @@ class OmniLogicHeaterControl(OmniLogicEntity, WaterHeaterEntity):
             "systemId"
         ]
 
+        self._last_action = 0
+        self._current_operation = None
+        self._state_delay = 30
+
     @property
     def temperature_unit(self):
         """Return the unit of measure for the target temp."""
@@ -132,12 +136,16 @@ class OmniLogicHeaterControl(OmniLogicEntity, WaterHeaterEntity):
     @property
     def current_operation(self):
         """Return the current operation mode of the Heater."""
-        current_operation = STATE_OFF
+        if self._last_action < (time.time() - self._state_delay):
+            self._current_operation = STATE_OFF
 
-        if self.coordinator.data[self._item_id[:4]]["VirtualHeater"]["enable"] == "yes":
-            current_operation = STATE_ON
+            if (
+                self.coordinator.data[self._item_id[:4]]["VirtualHeater"]["enable"]
+                == "yes"
+            ):
+                self._current_operation = STATE_ON
 
-        return current_operation
+        return self._current_operation
 
     @property
     def current_temperature(self):
@@ -183,17 +191,16 @@ class OmniLogicHeaterControl(OmniLogicEntity, WaterHeaterEntity):
 
     async def async_set_operation_mode(self, operation_mode):
         """Set the water heater operating mode."""
+        self._last_action = time.time()
+        self._current_operation = operation_mode != "off"
+        self.async_schedule_update_ha_state()
 
-        success = await self.coordinator.api.set_heater_onoff(
+        await self.coordinator.api.set_heater_onoff(
             int(self._item_id[1]),
             int(self._item_id[3]),
             int(self._equipment_id),
             operation_mode != "off",
         )
-
-        if success:
-            await asyncio.sleep(30)
-            self.async_schedule_update_ha_state()
 
 
 WATER_HEATER_TYPES = {
