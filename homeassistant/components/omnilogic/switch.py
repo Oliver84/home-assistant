@@ -1,5 +1,6 @@
 """Platform for switch integration."""
 import time
+import logging
 
 from omnilogic import OmniLogicException
 import voluptuous as vol
@@ -12,9 +13,10 @@ from .const import COORDINATOR, DOMAIN, PUMP_TYPES
 
 SERVICE_SET_SPEED = "set_pump_speed"
 
+_LOGGER = logging.getLogger(__name__)
 
 async def async_setup_entry(hass, entry, async_add_entities):
-    """Set up the light platform."""
+    """Set up the switch platform."""
 
     coordinator = hass.data[DOMAIN][entry.entry_id][COORDINATOR]
     entities = []
@@ -30,6 +32,7 @@ async def async_setup_entry(hass, entry, async_add_entities):
         for entity_setting in entity_settings:
             for state_key, entity_class in entity_setting["entity_classes"].items():
                 if state_key not in item:
+                    _LOGGER.error("State key %s was not found in %s, so no entity was created.", state_key, entity_setting["name"])
                     continue
 
                 guard = False
@@ -41,6 +44,7 @@ async def async_setup_entry(hass, entry, async_add_entities):
                         guard = True
 
                 if guard:
+                    _LOGGER.debug("%s was guarded, so no entity was created.':", entity_setting["name"])
                     continue
 
                 entity = entity_class(
@@ -113,11 +117,19 @@ class OmniLogicRelayControl(OmniLogicSwitch):
         self._state = True
         self.async_schedule_update_ha_state()
 
+        msp_system_id = int(self._item_id[1])
+        bow_id = int(self._item_id[3])
+        equipment_id = int(self._item_id[-1])
+        action = 1
+
+        if len(self._item_id) == 4:
+            bow_id = 0
+
         await self.coordinator.api.set_relay_valve(
-            int(self._item_id[1]),
-            int(self._item_id[3]),
-            int(self._item_id[-1]),
-            1,
+            msp_system_id,
+            bow_id,
+            equipment_id,
+            action
         )
 
     async def async_turn_off(self, **kwargs):
@@ -126,11 +138,19 @@ class OmniLogicRelayControl(OmniLogicSwitch):
         self._state = False
         self.async_schedule_update_ha_state()
 
+        msp_system_id = int(self._item_id[1])
+        bow_id = int(self._item_id[3])
+        equipment_id = int(self._item_id[-1])
+        action = 0
+
+        if len(self._item_id) == 4:
+            bow_id = 0
+
         await self.coordinator.api.set_relay_valve(
-            int(self._item_id[1]),
-            int(self._item_id[3]),
-            int(self._item_id[-1]),
-            0,
+            msp_system_id,
+            bow_id,
+            equipment_id,
+            action
         )
 
 
@@ -231,7 +251,7 @@ class OmniLogicPumpControl(OmniLogicSwitch):
 SWITCH_TYPES = {
     (4, "Relays"): [
         {
-            "entity_classes": {"switchState": OmniLogicRelayControl},
+            "entity_classes": {"relayState": OmniLogicRelayControl},
             "name": "",
             "kind": "relay",
             "icon": None,
@@ -240,7 +260,7 @@ SWITCH_TYPES = {
     ],
     (6, "Relays"): [
         {
-            "entity_classes": {"switchState": OmniLogicRelayControl},
+            "entity_classes": {"relayState": OmniLogicRelayControl},
             "name": "",
             "kind": "relay",
             "icon": None,
